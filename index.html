@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Horas Extras — Hikvision</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ── TOKENS ── */
+[data-theme="dark"]{
+  --bg:#0e0f11;--surface:#16181c;--card:#1c1f25;--border:#2a2d35;--border2:#363a45;
+  --text:#f0f1f3;--muted:#6b7280;--muted2:#9ca3af;--input-bg:#0e0f11;
+  --accent:#00e5a0;--accent3:#7b8cff;--danger:#ff4f4f;--warn:#f59e0b;--success:#10b981;
+  --shadow:rgba(0,0,0,.35);
+}
+[data-theme="light"]{
+  --bg:#f4f5f7;--surface:#ffffff;--card:#ffffff;--border:#dde1e7;--border2:#c8cdd6;
+  --text:#1a1d23;--muted:#8a929e;--muted2:#6b7280;--input-bg:#f4f5f7;
+  --accent:#00a572;--accent3:#4f5fc4;--danger:#dc2626;--warn:#d97706;--success:#059669;
+  --shadow:rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;transition:background .2s,color .2s;}
+.shell{display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;transition:background .2s;}
+.main{flex:1;overflow-x:hidden;}
+.logo{padding:22px 20px 18px;border-bottom:1px solid var(--border);}
+.logo-mark{font-size:10px;font-family:'DM Mono',monospace;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;}
+.logo h1{font-size:16px;font-weight:800;line-height:1.25;color:var(--text);}
+.nav{padding:10px 0;flex:1;}
+.nav-sec-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:2px;padding:12px 20px 5px;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;font-weight:600;color:var(--muted2);cursor:pointer;transition:all .15s;border-left:2px solid transparent;text-decoration:none;}
+.nav-item:hover{color:var(--text);background:rgba(128,128,128,.07);}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(0,165,114,.08);}
+.nav-item .ico{width:16px;text-align:center;font-size:14px;}
+.sidebar-footer{padding:14px 20px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:space-between;}
+
+/* THEME TOGGLE */
+.theme-btn{background:var(--card);border:1px solid var(--border2);color:var(--muted2);padding:4px 9px;border-radius:20px;cursor:pointer;font-size:11px;font-family:'DM Mono',monospace;transition:all .15s;}
+.theme-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* TOPBAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;transition:background .2s;}
+.page-title{font-size:20px;font-weight:800;color:var(--text);}
+.page-title span{color:var(--accent);}
+.status-pill{font-size:11px;font-family:'DM Mono',monospace;padding:4px 12px;border-radius:20px;font-weight:500;}
+.pill-ok{background:rgba(16,185,129,.12);color:var(--success);border:1px solid rgba(16,185,129,.25);}
+.pill-warn{background:rgba(245,158,11,.12);color:var(--warn);border:1px solid rgba(245,158,11,.25);}
+.pill-idle{background:rgba(107,114,128,.12);color:var(--muted2);border:1px solid var(--border);}
+
+.content{padding:28px;}
+.section{display:none;}
+.section.active{display:block;}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px;transition:background .2s,border .2s;}
+.card-title{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* HORARIO GRID */
+.horario-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.h-row{display:grid;grid-template-columns:120px 110px 110px 100px 56px;align-items:center;border-bottom:1px solid var(--border);transition:background .1s;}
+.h-row:last-child{border-bottom:none;}
+.h-row:hover:not(.h-head){background:rgba(128,128,128,.04);}
+.h-head{background:var(--bg);}
+.hc{padding:9px 12px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text);}
+.h-head .hc{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;padding:10px 12px;}
+.hc.dname{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding-left:16px;}
+.hc input[type=time],.hc input[type=number]{background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;outline:none;width:100%;transition:border .15s;}
+.hc input[type=time]:focus,.hc input[type=number]:focus{border-color:var(--accent);}
+.hc input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:pointer;}
+
+/* FORMS */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group label{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted2);}
+.form-group input,.form-group select{background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;outline:none;transition:border .15s,background .2s;}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent);}
+.form-group select option{background:var(--card);}
+
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:7px;}
+.btn-primary{background:var(--accent);color:#000;}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-secondary{background:transparent;border:1px solid var(--border2);color:var(--muted2);}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(0,165,114,.04);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:34px;margin-bottom:10px;}
+.upload-zone h3{font-size:14px;font-weight:700;margin-bottom:5px;color:var(--text);}
+.upload-zone p{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;}
+
+/* TABLES */
+.table-wrap{overflow-x:auto;margin-top:10px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{text-align:left;padding:9px 13px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+tbody tr:hover{background:rgba(128,128,128,.04);}
+tbody td{padding:10px 13px;vertical-align:middle;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);}
+tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-family:'DM Mono',monospace;font-weight:500;}
+.badge-green{background:rgba(16,185,129,.12);color:var(--success);}
+.badge-red{background:rgba(220,38,38,.12);color:var(--danger);}
+.badge-amber{background:rgba(217,119,6,.12);color:var(--warn);}
+.badge-blue{background:rgba(79,95,196,.12);color:var(--accent3);}
+.badge-gray{background:rgba(107,114,128,.12);color:var(--muted2);}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:22px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden;transition:background .2s;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--accent));}
+.stat-card.red{--ac:var(--danger);}
+.stat-card.amber{--ac:var(--warn);}
+.stat-card.blue{--ac:var(--accent3);}
+.stat-card.purple{--ac:#a855f7;}
+.stat-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px;}
+.stat-val{font-size:26px;font-weight:800;line-height:1;color:var(--text);}
+.stat-sub{font-size:11px;color:var(--muted2);font-family:'DM Mono',monospace;margin-top:3px;}
+
+/* RESULT COLORS */
+.rx{color:var(--accent);font-weight:600;}
+.rt{color:var(--danger);font-weight:500;}
+.rg{color:var(--warn);}
+.rn{color:var(--muted2);}
+
+/* PROGRESS */
+.progress-bar{background:var(--border);border-radius:4px;height:4px;margin-top:18px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));transition:width .4s;border-radius:4px;}
+
+/* FILTERS */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:center;}
+.filter-bar input,.filter-bar select{background:var(--card);border:1px solid var(--border2);color:var(--text);padding:7px 11px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;transition:border .15s;}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent);}
+
+/* TOAST */
+#toast{position:fixed;bottom:22px;right:22px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 18px;font-size:13px;font-family:'DM Mono',monospace;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none;z-index:999;max-width:300px;color:var(--text);}
+#toast.show{opacity:1;transform:translateY(0);}
+#toast.success{border-color:var(--success);color:var(--success);}
+#toast.error{border-color:var(--danger);color:var(--danger);}
+#toast.info{border-color:var(--accent3);color:var(--accent3);}
+
+/* MISC */
+.help-text{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:8px;line-height:1.6;}
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted);}
+.empty-state .eico{font-size:38px;margin-bottom:10px;}
+.empty-state p{font-family:'DM Mono',monospace;font-size:13px;}
+.icon-btn{background:transparent;border:1px solid var(--border);color:var(--muted2);padding:4px 9px;border-radius:6px;cursor:pointer;font-size:12px;transition:all .15s;}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent);}
+.icon-btn.del:hover{border-color:var(--danger);color:var(--danger);}
+.tag{display:inline-block;background:rgba(0,165,114,.1);color:var(--accent);border-radius:4px;font-size:10px;font-family:'DM Mono',monospace;padding:2px 6px;margin-left:5px;}
+.sede-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:12px;transition:background .2s;}
+.sede-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+.sede-card-name{font-size:15px;font-weight:700;color:var(--text);}
+.day-pill{font-size:10px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:4px;background:rgba(128,128,128,.1);color:var(--muted2);display:inline-block;margin:2px;}
+.day-pill.on{background:rgba(0,165,114,.1);color:var(--accent);}
+
+/* HORARIO EMPLEADO — colapsable */
+.emp-sched-toggle{font-size:11px;font-family:'DM Mono',monospace;color:var(--accent3);cursor:pointer;padding:4px 0;display:inline-flex;align-items:center;gap:5px;margin-top:8px;}
+.emp-sched-toggle:hover{text-decoration:underline;}
+.emp-sched-box{display:none;margin-top:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.emp-sched-box.open{display:block;}
+.h-row-sm{display:grid;grid-template-columns:100px 95px 95px 80px 50px;align-items:center;border-bottom:1px solid var(--border);}
+.h-row-sm:last-child{border-bottom:none;}
+.h-row-sm .hc{padding:7px 10px;font-size:11px;}
+.h-row-sm.h-head-sm{background:var(--bg);}
+.h-row-sm.h-head-sm .hc{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal-box{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:28px;width:100%;max-width:460px;transform:translateY(12px);transition:transform .2s;}
+.modal-overlay.open .modal-box{transform:translateY(0);}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:6px;color:var(--text);}
+.modal-sub{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:20px;}
+.modal-footer{display:flex;gap:10px;margin-top:22px;justify-content:flex-end;}
+
+/* SEDE SELECTOR TOPBAR */
+.sede-selector{display:flex;align-items:center;gap:10px;}
+.sede-selector label{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted2);white-space:nowrap;}
+.sede-selector select{background:var(--card);border:1px solid var(--border2);color:var(--text);padding:6px 12px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;cursor:pointer;min-width:160px;}
+.sede-selector select:focus{border-color:var(--accent);}
+.sede-badge{background:rgba(0,165,114,.12);color:var(--accent);border:1px solid rgba(0,165,114,.25);padding:4px 12px;border-radius:20px;font-size:11px;font-family:'DM Mono',monospace;font-weight:600;white-space:nowrap;}
+@media(max-width:768px){.form-grid{grid-template-columns:1fr;}.sidebar{display:none;}.content{padding:14px;}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">HH.EE · Hikvision</div>
+    <h1>Control de<br>Horas Extras</h1>
+  </div>
+  <nav class="nav">
+    <div class="nav-sec-label">Configuración</div>
+    <a class="nav-item active" data-sec="sedes"     onclick="go('sedes',this)">    <span class="ico">🏢</span>Sedes y Horarios</a>
+    <a class="nav-item"        data-sec="empleados" onclick="go('empleados',this)"><span class="ico">👥</span>Empleados</a>
+    <div class="nav-sec-label">Operación</div>
+    <a class="nav-item"        data-sec="importar"  onclick="go('importar',this)"> <span class="ico">📁</span>Importar CSV</a>
+    <a class="nav-item"        data-sec="resultados"onclick="go('resultados',this)"><span class="ico">📊</span>Resultados</a>
+    <div class="nav-sec-label">Exportar</div>
+    <a class="nav-item"        data-sec="exportar"  onclick="go('exportar',this)"> <span class="ico">⬇️</span>Exportar Excel</a>
+  </nav>
+  <div class="sidebar-footer">
+    <span id="db-info">⏳ BD…</span>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">☀️ Claro</button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="pgTitle">Sedes y <span>Horarios</span></div>
+    <div class="sede-selector">
+      <label>Sede activa:</label>
+      <select id="sede-activa" onchange="onSedeActivaChange()">
+        <option value="">Todas las sedes</option>
+      </select>
+      <span class="status-pill pill-idle" id="spill">Sin datos</span>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- ═══ SEDES ═══ -->
+    <section class="section active" id="sec-sedes">
+      <div class="card">
+        <div class="card-title">Configurar sede</div>
+        <div class="form-grid" style="margin-bottom:18px;">
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Nombre de la sede</label>
+            <input id="s-nom" type="text" placeholder="Ej: Sede Centro">
+          </div>
+          <div class="form-group">
+            <label>Tolerancia llegada (minutos)</label>
+            <input id="s-tol" type="number" value="10" min="0" max="60">
+          </div>
+          <div class="form-group">
+            <label>Hora extras nocturnas desde</label>
+            <input id="s-noct" type="time" value="21:00">
+          </div>
+        </div>
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted2);margin-bottom:10px;letter-spacing:1px;">HORARIO POR DÍA — desactiva días no laborables</div>
+        <div class="horario-wrap">
+          <div class="h-row h-head">
+            <div class="hc">Día</div><div class="hc">Entrada</div><div class="hc">Salida</div><div class="hc">Almuerzo (min)</div><div class="hc">¿Laboral?</div>
+          </div>
+          <div class="h-row" id="dr-1"><div class="hc dname">Lunes</div>    <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
+          <div class="h-row" id="dr-2"><div class="hc dname">Martes</div>   <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
+          <div class="h-row" id="dr-3"><div class="hc dname">Miércoles</div><div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
+          <div class="h-row" id="dr-4"><div class="hc dname">Jueves</div>   <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
+          <div class="h-row" id="dr-5"><div class="hc dname" style="color:var(--accent3);">Viernes</div><div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="16:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
+          <div class="h-row" id="dr-6"><div class="hc dname" style="color:var(--warn);">Sábado</div>   <div class="hc"><input type="time" class="de" value="09:00"></div><div class="hc"><input type="time" class="ds" value="14:00"></div><div class="hc"><input type="number" class="da" value="0"  min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc"></div></div>
+          <div class="h-row" id="dr-0"><div class="hc dname" style="color:var(--muted);">Domingo</div>  <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc"></div></div>
+        </div>
+        <p class="help-text">💡 Viernes precargado 8–16h. Sábado 9–14h sin almuerzo. Cada sede puede tener su propio horario.</p>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="guardarSede()">💾 Guardar sede</button>
+          <button class="btn btn-secondary" onclick="loadDemoSedes()">Cargar ejemplo</button>
+          <button class="btn btn-secondary btn-sm" id="btn-cancel-edit" style="display:none;" onclick="resetSedeForm()">✕ Cancelar</button>
+        </div>
+        <input type="hidden" id="s-eid">
+      </div>
+      <div class="card">
+        <div class="card-title">Sedes guardadas <span id="sc" class="tag">0</span></div>
+        <div id="sedes-list"><div class="empty-state"><div class="eico">🏢</div><p>Agrega tu primera sede.</p></div></div>
+      </div>
+    </section>
+
+    <!-- ═══ EMPLEADOS ═══ -->
+    <section class="section" id="sec-empleados">
+      <div class="card">
+        <div class="card-title">Registrar empleado</div>
+        <div class="form-grid">
+          <div class="form-group"><label>ID del CSV (Card No.)</label><input id="e-id" type="text" placeholder="00123"></div>
+          <div class="form-group"><label>Nombre completo</label><input id="e-nom" type="text" placeholder="Juan Pérez"></div>
+          <div class="form-group"><label>Sede asignada</label><select id="e-sede"><option value="">— selecciona —</option></select></div>
+          <div class="form-group"><label>Cargo (opcional)</label><input id="e-cargo" type="text" placeholder="Vendedor"></div>
+        </div>
+
+        <!-- HORARIO PERSONALIZADO POR EMPLEADO -->
+        <div style="margin-top:16px;">
+          <div class="emp-sched-toggle" onclick="toggleEmpSched()">
+            <span id="emp-sched-arrow">▶</span> Horario personalizado (opcional — si difiere del de la sede)
+          </div>
+          <div class="emp-sched-box" id="emp-sched-box">
+            <div class="h-row-sm h-head-sm">
+              <div class="hc">Día</div><div class="hc">Entrada</div><div class="hc">Salida</div><div class="hc">Almuerzo</div><div class="hc">Lab.</div>
+            </div>
+            <div class="h-row-sm" id="edr-1"><div class="hc dname" style="font-size:12px;">Lunes</div>    <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
+            <div class="h-row-sm" id="edr-2"><div class="hc dname" style="font-size:12px;">Martes</div>   <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
+            <div class="h-row-sm" id="edr-3"><div class="hc dname" style="font-size:12px;">Miércoles</div><div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
+            <div class="h-row-sm" id="edr-4"><div class="hc dname" style="font-size:12px;">Jueves</div>   <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
+            <div class="h-row-sm" id="edr-5"><div class="hc dname" style="font-size:12px;">Viernes</div>  <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="16:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
+            <div class="h-row-sm" id="edr-6"><div class="hc dname" style="font-size:12px;">Sábado</div>   <div class="hc"><input type="time" class="ede" value="09:00"></div><div class="hc"><input type="time" class="eds" value="14:00"></div><div class="hc"><input type="number" class="eda" value="0"  min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc"></div></div>
+            <div class="h-row-sm" id="edr-0"><div class="hc dname" style="font-size:12px;">Domingo</div>  <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc"></div></div>
+          </div>
+          <p class="help-text">Si dejas el horario personalizado cerrado (▶), el empleado usará el horario de su sede.</p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="guardarEmp()">＋ Agregar empleado</button>
+          <button class="btn btn-secondary" onclick="importarEmpCSV()">📥 Importar IDs del CSV</button>
+          <button class="btn btn-secondary btn-sm" id="btn-cancel-emp" style="display:none;" onclick="resetEmpForm()">✕ Cancelar edición</button>
+        </div>
+        <input type="hidden" id="e-eid">
+      </div>
+      <div class="card">
+        <div class="card-title">Empleados <span id="ec" class="tag">0</span></div>
+        <div class="filter-bar">
+          <input id="ef-q" type="text" placeholder="Buscar…" oninput="renderEmps()" style="flex:1;min-width:150px;">
+          <select id="ef-sede" onchange="renderEmps()"><option value="">Todas las sedes</option></select>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>ID</th><th>Nombre</th><th>Sede</th><th>Cargo</th><th>Horario</th><th></th></tr></thead>
+          <tbody id="etb"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ═══ IMPORTAR ═══ -->
+    <section class="section" id="sec-importar">
+      <div class="card">
+        <div class="card-title">Formato iVMS-4200</div>
+        <div style="background:var(--bg);border-radius:8px;padding:13px 15px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);line-height:2.2;border:1px solid var(--border);">
+          <span style="color:var(--accent);">No.</span>, <span style="color:var(--accent3);">Card No.</span>, <span style="color:var(--accent);">Name</span>, <span style="color:var(--accent3);">Department</span>, <span style="color:var(--accent);">Time</span><br>
+          <span style="color:var(--muted);">1, 00001, Juan Perez, Ventas, 2024/01/15 08:03:00</span>
+        </div>
+        <p class="help-text">Separador y columnas se detectan automáticamente.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Cargar archivo</div>
+        <div class="upload-zone" id="dz">
+          <input type="file" id="csvf" accept=".csv,.txt" onchange="handleFile(event)">
+          <div class="upload-icon">📂</div>
+          <h3>Arrastra el CSV aquí o haz clic</h3>
+          <p>iVMS-4200 · .csv o .txt · separador auto-detectado</p>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary btn-sm" onclick="loadDemo()">🧪 Datos de prueba</button>
+        </div>
+      </div>
+      <div class="card" id="prev-card" style="display:none;">
+        <div class="card-title">Vista previa</div>
+        <div id="csv-stats"></div>
+        <div class="table-wrap" id="csv-prev"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="procesar()">⚡ Calcular horas extras</button>
+          <button class="btn btn-secondary" onclick="clearCSV()">✕ Limpiar</button>
+        </div>
+        <div class="progress-bar" id="pbar" style="display:none;"><div class="progress-fill" id="pfill" style="width:0%"></div></div>
+      </div>
+    </section>
+
+    <!-- ═══ RESULTADOS ═══ -->
+    <section class="section" id="sec-resultados">
+      <div id="stats-area"></div>
+      <div class="card">
+        <div class="card-title">Detalle diario por empleado</div>
+        <div class="filter-bar">
+          <input id="rf-q" type="text" placeholder="Buscar empleado…" oninput="renderRes()" style="flex:1;min-width:150px;">
+          <select id="rf-sede" onchange="renderRes()"><option value="">Todas las sedes</option></select>
+          <select id="rf-mes" onchange="renderRes()"><option value="">Todos los meses</option></select>
+          <select id="rf-tipo" onchange="renderRes()">
+            <option value="">Todos</option>
+            <option value="extras">Con HH.EE</option>
+            <option value="tardanza">Con tardanza</option>
+            <option value="incompleto">Incompleto</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr>
+            <th>Empleado</th><th>Sede</th><th>Fecha</th><th>Día</th>
+            <th>Entrada</th><th>Salida</th><th>Horas trabajadas</th>
+            <th>Tardanza</th><th>Almuerzo</th>
+            <th>HE Diurnas</th><th>HE Nocturnas</th>
+            <th>Total HE</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="rtb"><tr><td colspan="13"><div class="empty-state"><div class="eico">📊</div><p>Importa y procesa un CSV primero.</p></div></td></tr></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ═══ EXPORTAR ═══ -->
+    <section class="section" id="sec-exportar">
+      <div class="card">
+        <div class="card-title">Opciones de exportación</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Sede</label><select id="xf-sede"><option value="">Todas</option></select></div>
+          <div class="form-group"><label>Mes</label><select id="xf-mes"><option value="">Todos</option></select></div>
+          <div class="form-group"><label>Columnas extra</label>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:4px;">
+              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-t" checked> Tardanza</label>
+              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-g" checked> Almuerzo/Gabela</label>
+              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-d" checked> HE Diurnas / Nocturnas separadas</label>
+              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-trab" checked> Horas trabajadas</label>
+            </div>
+          </div>
+          <div class="form-group"><label>Formato de reporte</label>
+            <select id="xf-formato">
+              <option value="por_empleado">Un archivo por empleado (como imagen)</option>
+              <option value="consolidado">Un archivo consolidado (todas las sedes)</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="exportXLSX()">📥 Exportar .xlsx</button>
+          <button class="btn btn-secondary" onclick="exportCSV()">📄 Exportar .csv</button>
+        </div>
+        <p class="help-text" style="margin-top:12px;">
+          <strong style="color:var(--text);">Un archivo por empleado:</strong> genera un .xlsx con una hoja por cada colaborador, con el mismo formato de la imagen (encabezado con nombre, tabla de días y totales al pie).<br>
+          <strong style="color:var(--text);">Consolidado:</strong> todo en un archivo con 3 hojas: detalle diario, resumen por empleado, resumen por sede.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">Resumen consolidado por empleado</div>
+        <div id="consol-area"><div class="empty-state"><div class="eico">📋</div><p>Procesa datos primero.</p></div></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+</div>
+
+<!-- MODAL IMPORTAR EMPLEADOS -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal-box">
+    <div class="modal-title">Importar empleados del CSV</div>
+    <div class="modal-sub" id="modal-import-sub">Se detectaron <strong id="modal-import-count">0</strong> empleados nuevos en el archivo.</div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>Asignar todos a la sede</label>
+      <select id="modal-import-sede" style="background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;outline:none;">
+        <option value="">— selecciona —</option>
+      </select>
+    </div>
+    <div id="modal-import-preview" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted2);background:var(--bg);"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-import')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarImport()">✓ Importar</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  INDEXEDDB
+// ══════════════════════════════════════════
+const DB_NAME='HorasExtrasHK3', DB_VER=1;
+let db=null;
+function openDB(){
+  return new Promise((ok,er)=>{
+    const r=indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded=e=>{
+      const d=e.target.result;
+      ['sedes','empleados','resultados'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});});
+    };
+    r.onsuccess=e=>{db=e.target.result;ok(db);};
+    r.onerror=e=>er(e.target.error);
+  });
+}
+const txS=(s,m='readonly')=>db.transaction(s,m).objectStore(s);
+const dbAll=s=>new Promise((ok,er)=>{const r=txS(s).getAll();r.onsuccess=()=>ok(r.result);r.onerror=()=>er(r.error);});
+const dbPut=(s,o)=>new Promise((ok,er)=>{const r=txS(s,'readwrite').put(o);r.onsuccess=()=>ok();r.onerror=()=>er(r.error);});
+const dbDel=(s,k)=>new Promise((ok,er)=>{const r=txS(s,'readwrite').delete(k);r.onsuccess=()=>ok();r.onerror=()=>er(r.error);});
+const dbClear=s=>new Promise((ok,er)=>{const r=txS(s,'readwrite').clear();r.onsuccess=()=>ok();r.onerror=()=>er(r.error);});
+
+// ══════════════════════════════════════════
+//  ESTADO
+// ══════════════════════════════════════════
+const S={sedes:[],empleados:[],rawRows:[],csvHdr:[],resultados:[]};
+
+// ══════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════
+// Sede activa global
+let sedeActiva = localStorage.getItem('sedeActiva') || '';
+
+openDB().then(async()=>{
+  document.getElementById('db-info').textContent='✓ BD activa';
+  S.sedes     = await dbAll('sedes');
+  S.empleados = await dbAll('empleados');
+  S.resultados= await dbAll('resultados');
+  renderSedes(); renderEmps(); fillSelects(); fillSedeActiva();
+  // Apply saved sedeActiva
+  if(sedeActiva && S.sedes.find(s=>s.id===sedeActiva)){
+    document.getElementById('sede-activa').value = sedeActiva;
+  } else {
+    sedeActiva = '';
+  }
+  if(S.resultados.length){ renderStats(); renderRes(); spill('ok', S.resultados.length+' reg.'); }
+  else if(S.sedes.length) spill('ok','Config. cargada');
+  const t=localStorage.getItem('theme')||'dark';
+  setTheme(t);
+}).catch(e=>{document.getElementById('db-info').textContent='⚠ BD Error';console.error(e);});
+
+// ══════════════════════════════════════════
+//  TEMA
+// ══════════════════════════════════════════
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  document.getElementById('theme-btn').textContent=t==='dark'?'☀️ Claro':'🌙 Oscuro';
+  localStorage.setItem('theme',t);
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme');
+  setTheme(cur==='dark'?'light':'dark');
+}
+
+// ══════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════
+const NTITLES={sedes:'Sedes y <span>Horarios</span>',empleados:'Gestión de <span>Empleados</span>',importar:'Importar <span>CSV</span>',resultados:'Ver <span>Resultados</span>',exportar:'Exportar <span>Excel</span>'};
+
+function onSedeActivaChange(){
+  sedeActiva = document.getElementById('sede-activa').value;
+  localStorage.setItem('sedeActiva', sedeActiva);
+  // Sync all sede filters to match
+  ['ef-sede','rf-sede','xf-sede'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value = sedeActiva;
+  });
+  renderEmps(); renderRes(); renderConsol();
+}
+
+function fillSedeActiva(){
+  const el = document.getElementById('sede-activa');
+  if(!el) return;
+  const v = el.value;
+  el.innerHTML = '<option value="">Todas las sedes</option>';
+  S.sedes.forEach(s=>{
+    const o=document.createElement('option');
+    o.value=s.id; o.textContent=s.nombre;
+    el.appendChild(o);
+  });
+  el.value = v;
+}
+
+function go(name,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('pgTitle').innerHTML=NTITLES[name];
+  if(['empleados','exportar'].includes(name)) fillSelects();
+  if(name==='exportar') renderConsol();
+  // Sync sede filter on navigate
+  ['ef-sede','rf-sede','xf-sede'].forEach(id=>{
+    const fEl=document.getElementById(id);
+    if(fEl && sedeActiva) fEl.value=sedeActiva;
+  });
+}
+
+// ══════════════════════════════════════════
+//  TOAST / SPILL
+// ══════════════════════════════════════════
+let _tt;
+function toast(msg,t='info'){const el=document.getElementById('toast');el.textContent=msg;el.className='show '+t;clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3500);}
+function spill(t,msg){const el=document.getElementById('spill');el.textContent=msg;el.className='status-pill '+(t==='ok'?'pill-ok':t==='warn'?'pill-warn':'pill-idle');}
+
+// ══════════════════════════════════════════
+//  TIEMPO UTILS
+// ══════════════════════════════════════════
+const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const DIAS_FULL=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const t2m=t=>{if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;};
+
+// FORMATO PRINCIPAL: 00h 00m
+function m2hm(min){
+  if(min==null||min<=0) return '00h 00m';
+  const h=Math.floor(min/60), m=Math.round(min%60);
+  return `${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m`;
+}
+// para "no marcó salida" etc
+function m2hmOrDash(min){return(!min||min<=0)?'—':m2hm(min);}
+
+const fmtT=d=>d?String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'--:--';
+const dkey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fmtFecha=s=>{const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;};
+
+function parseDT(s){
+  if(!s)return null; s=s.toString().trim();
+  const m1=s.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\s+(\d{1,2}):(\d{2})/);
+  if(m1)return new Date(+m1[1],+m1[2]-1,+m1[3],+m1[4],+m1[5]);
+  const m2=s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+(\d{1,2}):(\d{2})/);
+  if(m2)return new Date(+m2[3],+m2[2]-1,+m2[1],+m2[4],+m2[5]);
+  const d=new Date(s);return isNaN(d)?null:d;
+}
+
+// ══════════════════════════════════════════
+//  HORARIO FORM HELPERS
+// ══════════════════════════════════════════
+function readHForm(prefix){
+  const dias={};
+  [0,1,2,3,4,5,6].forEach(dow=>{
+    const r=document.getElementById(prefix+dow);if(!r)return;
+    dias[dow]={activo:r.querySelector('.'+prefix.replace('dr-','dc').replace('edr-','edc')||'.dc').checked,
+               entrada:r.querySelector('.'+prefix.replace('dr-','de').replace('edr-','ede')||'.de').value,
+               salida:r.querySelector('.'+prefix.replace('dr-','ds').replace('edr-','eds')||'.ds').value,
+               almuerzo:parseInt(r.querySelector('.'+prefix.replace('dr-','da').replace('edr-','eda')||'.da').value)||0};
+  });
+  return dias;
+}
+
+// simpler version
+function readDias(idPrefix, cbClass, entClass, salClass, almClass){
+  const dias={};
+  [0,1,2,3,4,5,6].forEach(dow=>{
+    const r=document.getElementById(idPrefix+dow);if(!r)return;
+    dias[dow]={activo:r.querySelector(cbClass).checked,entrada:r.querySelector(entClass).value,salida:r.querySelector(salClass).value,almuerzo:parseInt(r.querySelector(almClass).value)||0};
+  });
+  return dias;
+}
+function writeDias(idPrefix, cbClass, entClass, salClass, almClass, dias){
+  const DEF={activo:false,entrada:'08:00',salida:'17:00',almuerzo:60};
+  [0,1,2,3,4,5,6].forEach(dow=>{
+    const r=document.getElementById(idPrefix+dow);if(!r)return;
+    const d=dias&&dias[dow]?dias[dow]:DEF;
+    r.querySelector(cbClass).checked=!!d.activo;
+    r.querySelector(entClass).value=d.entrada||'08:00';
+    r.querySelector(salClass).value=d.salida||'17:00';
+    r.querySelector(almClass).value=d.almuerzo??60;
+  });
+}
+const DEF_DIAS={
+  1:{activo:true,entrada:'08:00',salida:'17:00',almuerzo:60},
+  2:{activo:true,entrada:'08:00',salida:'17:00',almuerzo:60},
+  3:{activo:true,entrada:'08:00',salida:'17:00',almuerzo:60},
+  4:{activo:true,entrada:'08:00',salida:'17:00',almuerzo:60},
+  5:{activo:true,entrada:'08:00',salida:'16:00',almuerzo:60},
+  6:{activo:false,entrada:'09:00',salida:'14:00',almuerzo:0},
+  0:{activo:false,entrada:'08:00',salida:'17:00',almuerzo:60},
+};
+
+// ══════════════════════════════════════════
+//  SEDES
+// ══════════════════════════════════════════
+async function guardarSede(){
+  const nom=document.getElementById('s-nom').value.trim();
+  const tol=parseInt(document.getElementById('s-tol').value)||0;
+  const noct=document.getElementById('s-noct').value||'21:00';
+  const eid=document.getElementById('s-eid').value;
+  if(!nom){toast('Escribe el nombre','error');return;}
+  const dias=readDias('dr-','.dc','.de','.ds','.da');
+  if(!Object.values(dias).some(d=>d.activo)){toast('Activa al menos un día','error');return;}
+  const s={id:eid||Date.now().toString(),nombre:nom,tolerancia:tol,hnoct:noct,dias};
+  await dbPut('sedes',s);
+  const i=S.sedes.findIndex(x=>x.id===s.id);
+  if(i>=0)S.sedes[i]=s;else S.sedes.push(s);
+  renderSedes();fillSelects();fillSedeActiva();resetSedeForm();
+  toast(`Sede "${nom}" guardada`,'success');
+}
+function editSede(id){
+  const s=S.sedes.find(x=>x.id===id);if(!s)return;
+  document.getElementById('s-nom').value=s.nombre;
+  document.getElementById('s-tol').value=s.tolerancia||10;
+  document.getElementById('s-noct').value=s.hnoct||'21:00';
+  document.getElementById('s-eid').value=s.id;
+  document.getElementById('btn-cancel-edit').style.display='inline-flex';
+  writeDias('dr-','.dc','.de','.ds','.da',s.dias);
+  document.getElementById('s-nom').scrollIntoView({behavior:'smooth'});
+  toast('Modo edición','info');
+}
+async function delSede(id){
+  await dbDel('sedes',id);S.sedes=S.sedes.filter(s=>s.id!==id);
+  renderSedes();fillSelects();toast('Sede eliminada','info');
+}
+function resetSedeForm(){
+  document.getElementById('s-nom').value='';document.getElementById('s-eid').value='';
+  document.getElementById('btn-cancel-edit').style.display='none';
+  writeDias('dr-','.dc','.de','.ds','.da',DEF_DIAS);
+}
+function renderSedes(){
+  document.getElementById('sc').textContent=S.sedes.length;
+  const el=document.getElementById('sedes-list');
+  if(!S.sedes.length){el.innerHTML='<div class="empty-state"><div class="eico">🏢</div><p>Agrega tu primera sede.</p></div>';return;}
+  el.innerHTML=S.sedes.map(s=>{
+    const d=s.dias||{};
+    const pills=[1,2,3,4,5,6,0].map(dow=>{
+      const dc=d[dow];const lbl=DIAS[dow];
+      if(!dc)return`<span class="day-pill">${lbl}</span>`;
+      const tip=dc.activo?(dc.entrada+'–'+dc.salida+(dc.almuerzo?' alm.'+dc.almuerzo+'min':' sin alm.')):'No laboral';
+      const sub=dc.activo?(' <small style="font-size:9px;">'+dc.entrada.slice(0,5)+'</small>'):'';
+      return`<span class="day-pill ${dc.activo?'on':''}" title="${tip}">${lbl}${sub}</span>`;
+    }).join('');
+    return`<div class="sede-card">
+      <div class="sede-card-header">
+        <div><div class="sede-card-name">${s.nombre}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:3px;">Tolerancia: ${s.tolerancia} min · Noct. desde: ${s.hnoct}</div>
+        <div style="margin-top:8px;">${pills}</div></div>
+        <div style="display:flex;gap:8px;flex-shrink:0;margin-left:12px;">
+          <button class="icon-btn" onclick="editSede('${s.id}')">✏️ Editar</button>
+          <button class="icon-btn del" onclick="delSede('${s.id}')">✕</button>
+        </div>
+      </div></div>`;
+  }).join('');
+}
+async function loadDemoSedes(){
+  const mk=(vi,sa)=>({
+    1:{activo:true,entrada:'08:00',salida:'17:00',almuerzo:60},
+    2:{activo:true,entrada:'08:00',salida:'17:00',almuerzo:60},
+    3:{activo:true,entrada:'08:00',salida:'17:00',almuerzo:60},
+    4:{activo:true,entrada:'08:00',salida:'17:00',almuerzo:60},
+    5:{activo:true,entrada:'08:00',salida:vi,almuerzo:60},
+    6:{activo:sa,entrada:'09:00',salida:'14:00',almuerzo:0},
+    0:{activo:false,entrada:'08:00',salida:'17:00',almuerzo:60},
+  });
+  const demo=[
+    {id:'ds1',nombre:'Sede Centro',tolerancia:10,hnoct:'21:00',dias:mk('16:00',true)},
+    {id:'ds2',nombre:'Sede Norte', tolerancia:15,hnoct:'21:00',dias:mk('16:00',false)},
+    {id:'ds3',nombre:'Sede Sur',   tolerancia:10,hnoct:'21:00',dias:mk('16:00',true)},
+  ];
+  for(const s of demo)await dbPut('sedes',s);
+  S.sedes=await dbAll('sedes');
+  renderSedes();fillSelects();toast('3 sedes de ejemplo cargadas','success');
+}
+
+// ══════════════════════════════════════════
+//  EMPLEADOS
+// ══════════════════════════════════════════
+let empSchedOpen=false;
+function toggleEmpSched(){
+  empSchedOpen=!empSchedOpen;
+  document.getElementById('emp-sched-box').classList.toggle('open',empSchedOpen);
+  document.getElementById('emp-sched-arrow').textContent=empSchedOpen?'▼':'▶';
+}
+
+async function guardarEmp(){
+  const id=document.getElementById('e-id').value.trim();
+  const nom=document.getElementById('e-nom').value.trim();
+  const sid=document.getElementById('e-sede').value;
+  const cargo=document.getElementById('e-cargo').value.trim();
+  const eid=document.getElementById('e-eid').value;
+  if(!id||!nom||!sid){toast('ID, nombre y sede son obligatorios','error');return;}
+  // custom schedule — only save if open
+  let diasPersonal=null;
+  if(empSchedOpen){
+    diasPersonal=readDias('edr-','.edc','.ede','.eds','.eda');
+    if(!Object.values(diasPersonal).some(d=>d.activo)) diasPersonal=null;
+  }
+  const e={id,nombre:nom,sedeId:sid,cargo,diasPersonal};
+  await dbPut('empleados',e);
+  const i=S.empleados.findIndex(x=>x.id===id);
+  if(i>=0)S.empleados[i]=e;else S.empleados.push(e);
+  renderEmps();resetEmpForm();
+  toast(`"${nom}" guardado`,'success');
+}
+
+async function delEmp(id){await dbDel('empleados',id);S.empleados=S.empleados.filter(e=>e.id!==id);renderEmps();}
+
+function editEmp(id){
+  const e=S.empleados.find(x=>x.id===id);if(!e)return;
+  document.getElementById('e-id').value=e.id;
+  document.getElementById('e-nom').value=e.nombre;
+  document.getElementById('e-sede').value=e.sedeId;
+  document.getElementById('e-cargo').value=e.cargo||'';
+  document.getElementById('e-eid').value=e.id;
+  document.getElementById('btn-cancel-emp').style.display='inline-flex';
+  if(e.diasPersonal){
+    if(!empSchedOpen) toggleEmpSched();
+    writeDias('edr-','.edc','.ede','.eds','.eda',e.diasPersonal);
+  }
+  document.getElementById('e-id').scrollIntoView({behavior:'smooth'});
+  toast('Editando empleado','info');
+}
+
+function resetEmpForm(){
+  document.getElementById('e-id').value='';document.getElementById('e-nom').value='';
+  document.getElementById('e-cargo').value='';document.getElementById('e-eid').value='';
+  document.getElementById('btn-cancel-emp').style.display='none';
+  if(empSchedOpen) toggleEmpSched();
+}
+
+function renderEmps(){
+  const q=(document.getElementById('ef-q')?.value||'').toLowerCase();
+  // Use sedeActiva if no explicit filter chosen
+  const sfRaw=document.getElementById('ef-sede')?.value||'';
+  const sf=sfRaw||sedeActiva||'';
+  const f=S.empleados.filter(e=>(!sf||e.sedeId===sf)&&(e.nombre.toLowerCase().includes(q)||e.id.includes(q)));
+  document.getElementById('ec').textContent=S.empleados.length;
+  const tb=document.getElementById('etb');
+  if(!f.length){tb.innerHTML='<tr><td colspan="6"><div class="empty-state"><div class="eico">👤</div><p>Sin empleados.</p></div></td></tr>';return;}
+  tb.innerHTML=f.map(e=>{
+    const s=S.sedes.find(x=>x.id===e.sedeId);
+    return`<tr>
+      <td>${e.id}</td><td class="name">${e.nombre}</td>
+      <td>${s?s.nombre:'<span class="badge badge-red">Sin sede</span>'}</td>
+      <td>${e.cargo||'<span style="color:var(--muted)">—</span>'}</td>
+      <td>${e.diasPersonal?'<span class="badge badge-blue">Personalizado</span>':'<span class="badge badge-gray">De sede</span>'}</td>
+      <td style="display:flex;gap:6px;">
+        <button class="icon-btn" onclick="editEmp('${e.id}')">✏️</button>
+        <button class="icon-btn del" onclick="delEmp('${e.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Pending import list (filled when modal opens)
+let _importPending = [];
+
+function importarEmpCSV(){
+  if(!S.rawRows.length){toast('Carga un CSV primero','error');return;}
+  if(!S.sedes.length){toast('Crea al menos una sede primero','error');return;}
+  const ic=detectCol(S.csvHdr,['card no','card_no','cardno']);
+  const nc=detectCol(S.csvHdr,['name','nombre','employee']);
+  if(!ic&&!nc){toast('Sin col. de ID/nombre en CSV','error');return;}
+  const seen=new Set(S.empleados.map(e=>e.id));
+  _importPending=[];
+  const seenNew=new Set();
+  for(const row of S.rawRows){
+    const rawId=(ic?row[ic]:row[nc]||'').toString().trim();
+    const rawNom=(nc?row[nc]:'').toString().trim()||rawId;
+    if(!rawId||seen.has(rawId)||seenNew.has(rawId))continue;
+    seenNew.add(rawId);
+    _importPending.push({id:rawId,nombre:rawNom});
+  }
+  if(!_importPending.length){toast('No hay empleados nuevos en el CSV','info');return;}
+  // Fill modal
+  document.getElementById('modal-import-count').textContent=_importPending.length;
+  const mSede=document.getElementById('modal-import-sede');
+  mSede.innerHTML='<option value="">— selecciona —</option>';
+  S.sedes.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.nombre;mSede.appendChild(o);});
+  // Pre-select active sede
+  if(sedeActiva) mSede.value=sedeActiva;
+  // Preview list
+  document.getElementById('modal-import-preview').innerHTML=
+    _importPending.slice(0,15).map(e=>`<div style="padding:3px 0;border-bottom:1px solid var(--border);">${e.id} · ${e.nombre}</div>`).join('')+
+    (_importPending.length>15?`<div style="color:var(--muted);padding:4px 0;">… y ${_importPending.length-15} más</div>`:'');
+  openModal('modal-import');
+}
+
+async function confirmarImport(){
+  const sid=document.getElementById('modal-import-sede').value;
+  if(!sid){toast('Selecciona una sede','error');return;}
+  let n=0;
+  for(const e of _importPending){
+    const emp={id:e.id,nombre:e.nombre,sedeId:sid,cargo:'',diasPersonal:null};
+    await dbPut('empleados',emp);
+    if(!S.empleados.find(x=>x.id===e.id)) S.empleados.push(emp);
+    n++;
+  }
+  closeModal('modal-import');
+  renderEmps();
+  toast(`${n} empleados importados a "${S.sedes.find(s=>s.id===sid)?.nombre}"`, 'success');
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ══════════════════════════════════════════
+//  SELECTS
+// ══════════════════════════════════════════
+function fillSelects(){
+  ['e-sede','ef-sede','rf-sede','xf-sede'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const v=el.value;
+    el.innerHTML=`<option value="">${id==='e-sede'?'— selecciona —':'Todas las sedes'}</option>`;
+    S.sedes.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.nombre;el.appendChild(o);});
+    // Apply active sede if set
+    if(sedeActiva && id!=='e-sede') el.value=sedeActiva;
+    else if(v) el.value=v;
+  });
+  fillSedeActiva();
+}
+
+// ══════════════════════════════════════════
+//  CSV
+// ══════════════════════════════════════════
+function detectCol(hdr,cands){
+  for(const c of cands){const f=hdr.find(h=>h.toLowerCase().replace(/[\s_.]/g,'').includes(c.replace(/[\s_.]/g,'')));if(f)return f;}
+  return null;
+}
+const dzEl=document.getElementById('dz');
+['dragover','dragenter'].forEach(e=>dzEl.addEventListener(e,ev=>{ev.preventDefault();dzEl.classList.add('drag');}));
+['dragleave','drop'].forEach(e=>dzEl.addEventListener(e,()=>dzEl.classList.remove('drag')));
+dzEl.addEventListener('drop',ev=>{ev.preventDefault();const f=ev.dataTransfer.files[0];if(f)readFile(f);});
+function handleFile(e){readFile(e.target.files[0]);}
+function readFile(f){const r=new FileReader();r.onload=ev=>parseCSV(ev.target.result);r.readAsText(f,'utf-8');}
+
+function parseCSV(txt){
+  const lines=txt.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length){toast('Archivo vacío','error');return;}
+  let sep=',';const fl=lines[0];
+  if(fl.split(';').length>fl.split(',').length)sep=';';
+  else if(fl.split('\t').length>fl.split(',').length)sep='\t';
+  const split=line=>{const r=[];let c='';let q=false;for(const ch of line){if(ch==='"'){q=!q;}else if(ch===sep&&!q){r.push(c.trim());c='';}else c+=ch;}r.push(c.trim());return r;};
+  let hi=0;
+  for(let i=0;i<Math.min(5,lines.length);i++){if(split(lines[i]).some(c=>/time|fecha|hora|name|nombre|card/i.test(c))){hi=i;break;}}
+  const hdr=split(lines[hi]).map(h=>h.replace(/["\uFEFF]/g,'').trim());
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){const v=split(lines[i]);if(v.length<2)continue;const row={};hdr.forEach((h,ix)=>row[h]=(v[ix]||'').replace(/"/g,'').trim());rows.push(row);}
+  S.csvHdr=hdr;S.rawRows=rows;
+  const tc=detectCol(hdr,['time','fecha','datetime','date','hora']);
+  const ic=detectCol(hdr,['card no','card_no','cardno']);
+  const nc=detectCol(hdr,['name','nombre','employee']);
+  document.getElementById('prev-card').style.display='block';
+  document.getElementById('csv-stats').innerHTML=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+    <span class="badge badge-blue">${rows.length} registros</span>
+    ${tc?`<span class="badge badge-green">✓ Tiempo: ${tc}</span>`:'<span class="badge badge-red">✗ Sin col. tiempo</span>'}
+    ${ic?`<span class="badge badge-green">✓ ID: ${ic}</span>`:''}
+    ${nc?`<span class="badge badge-green">✓ Nombre: ${nc}</span>`:''}
+  </div>`;
+  document.getElementById('csv-prev').innerHTML=`<table><thead><tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.slice(0,6).map(r=>`<tr>${hdr.map(h=>`<td>${r[h]||''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  toast(`CSV cargado: ${rows.length} registros`,'success');
+  spill('warn',`${rows.length} filas listas`);
+}
+function clearCSV(){S.rawRows=[];S.csvHdr=[];document.getElementById('prev-card').style.display='none';document.getElementById('csvf').value='';}
+
+// ══════════════════════════════════════════
+//  DEMO
+// ══════════════════════════════════════════
+function loadDemo(){
+  const names=['Ana García','Luis Martínez','Carlos López','María Rodríguez','Pedro Jiménez','Sofía Torres'];
+  const ids=['00001','00002','00003','00004','00005','00006'];
+  const hdr=['No.','Card No.','Name','Department','Time','Card Reader','Verification Mode'];
+  const pad=n=>String(n).padStart(2,'0');
+  const rows=[];let seq=1;const now=new Date();
+  for(let day=25;day>=1;day--){
+    const date=new Date(now.getFullYear(),now.getMonth(),day);
+    const dow=date.getDay();if(dow===0)continue;
+    const isSat=dow===6,isFri=dow===5;
+    const baseSal=isSat?14:isFri?16:17;
+    names.forEach((name,i)=>{
+      const late=Math.random()<0.2,ot=Math.random()<0.3;
+      const inDt=new Date(date);inDt.setHours(isSat?9:8,(late?14:0)+Math.floor(Math.random()*6),0);
+      const outDt=new Date(date);outDt.setHours(baseSal,(ot?50:0)+Math.floor(Math.random()*8),0);
+      const fmt=d=>`${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+      rows.push({'No.':seq++,'Card No.':ids[i],'Name':name,'Department':i<3?'Ventas':'Admin','Time':fmt(inDt),'Card Reader':'Entrada','Verification Mode':'Face'});
+      rows.push({'No.':seq++,'Card No.':ids[i],'Name':name,'Department':i<3?'Ventas':'Admin','Time':fmt(outDt),'Card Reader':'Salida','Verification Mode':'Face'});
+    });
+  }
+  S.csvHdr=hdr;S.rawRows=rows;
+  document.getElementById('prev-card').style.display='block';
+  document.getElementById('csv-stats').innerHTML=`<div style="display:flex;gap:10px;"><span class="badge badge-blue">${rows.length} reg. demo</span><span class="badge badge-green">✓ Time · Card No. · Name</span></div>`;
+  document.getElementById('csv-prev').innerHTML=`<table><thead><tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.slice(0,6).map(r=>`<tr>${hdr.map(h=>`<td>${r[h]||''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  if(!S.sedes.length)loadDemoSedes().then(()=>{if(!S.empleados.length)addDemoEmps();});
+  else if(!S.empleados.length)addDemoEmps();
+  toast('Datos demo cargados','success');
+}
+async function addDemoEmps(){
+  const names=['Ana García','Luis Martínez','Carlos López','María Rodríguez','Pedro Jiménez','Sofía Torres'];
+  const ids=['00001','00002','00003','00004','00005','00006'];
+  const sid=S.sedes[0]?.id||'ds1';
+  for(let i=0;i<names.length;i++){
+    const e={id:ids[i],nombre:names[i],sedeId:sid,cargo:i<3?'Vendedor':'Administrativo',diasPersonal:null};
+    await dbPut('empleados',e);if(!S.empleados.find(x=>x.id===ids[i]))S.empleados.push(e);
+  }
+  renderEmps();fillSelects();
+}
+
+// ══════════════════════════════════════════
+//  PROCESAR
+// ══════════════════════════════════════════
+async function procesar(){
+  if(!S.rawRows.length){toast('No hay CSV cargado','error');return;}
+  if(!S.sedes.length){toast('Configura al menos una sede','error');return;}
+  const pbar=document.getElementById('pbar'),pfill=document.getElementById('pfill');
+  pbar.style.display='block';pfill.style.width='5%';
+  const tc=detectCol(S.csvHdr,['time','fecha','datetime','date','hora']);
+  const ic=detectCol(S.csvHdr,['card no','card_no','cardno','no.']);
+  const nc=detectCol(S.csvHdr,['name','nombre','employee']);
+  if(!tc){toast('No se encontró columna de tiempo','error');return;}
+
+  const byKey={};
+  S.rawRows.forEach(row=>{
+    const rawId=(ic?row[ic]:'').toString().trim();
+    const rawNom=(nc?row[nc]:'').toString().trim();
+    const ek=rawId||rawNom;if(!ek)return;
+    const dt=parseDT(row[tc]);if(!dt||isNaN(dt))return;
+    const k=ek+'_'+dkey(dt);
+    if(!byKey[k])byKey[k]={empId:rawId,empNom:rawNom,date:dt,marks:[]};
+    // Deduplicate: skip if same minute already recorded
+    const dtMin=dt.getHours()*60+dt.getMinutes();
+    const alreadyHasMin=byKey[k].marks.some(m=>m.getHours()*60+m.getMinutes()===dtMin);
+    if(!alreadyHasMin) byKey[k].marks.push(dt);
+  });
+
+  pfill.style.width='40%';
+  const resultados=[];
+
+  Object.values(byKey).forEach(({empId,empNom,date,marks})=>{
+    marks.sort((a,b)=>a-b);
+    const emp=S.empleados.find(e=>e.id===empId||e.nombre.toLowerCase()===empNom.toLowerCase());
+    const sedeId=emp?.sedeId||S.sedes[0]?.id;
+    const sede=S.sedes.find(s=>s.id===sedeId)||S.sedes[0];
+    if(!sede)return;
+
+    const dow=date.getDay();
+    // Use employee personal schedule if exists, else sede schedule
+    const diasSrc=emp?.diasPersonal||sede.dias||{};
+    const dc=diasSrc[dow];
+    const esLab=!!(dc?.activo);
+
+    const entM=t2m(dc?.entrada||'08:00');
+    const salM=t2m(dc?.salida||'17:00');
+    const almM=parseInt(dc?.almuerzo??60);
+    const tolM=sede.tolerancia||0;
+    const hnoct=t2m(sede.hnoct||'21:00');
+
+    const p=marks[0],u=marks[marks.length-1];
+    const pM=p.getHours()*60+p.getMinutes();
+    const uM=u.getHours()*60+u.getMinutes();
+
+    // Tardanza
+    const tardanza=esLab?Math.max(0,pM-entM-tolM):0;
+
+    // Sin salida: solo 1 marca única, o primera y última en mismo minuto
+    const sinSalida = marks.length < 2 ||
+      (marks[0].getHours()===marks[marks.length-1].getHours() &&
+       marks[0].getMinutes()===marks[marks.length-1].getMinutes());
+
+    // Almuerzo tomado
+    let almTom=almM;
+    if(marks.length>=4){
+      let mg=0;
+      for(let i=0;i<marks.length-1;i++){const g=(marks[i+1]-marks[i])/60000;if(g>15&&g>mg)mg=g;}
+      if(mg>15)almTom=Math.round(mg);
+    }
+
+    // Horas trabajadas brutas
+    const trabajadasBruto=sinSalida?null:uM-pM;
+    // Trabajadas netas = bruto - almuerzo
+    const trabajadasNeto=sinSalida?null:Math.max(0,trabajadasBruto-almTom);
+
+    // HH.EE
+    const extrasMin=sinSalida?null:Math.max(0,uM-salM);
+    let heDiur=0,heNoct=0;
+    if(extrasMin>0){
+      heDiur=salM<hnoct?Math.min(extrasMin,hnoct-salM):0;
+      heNoct=Math.max(0,uM-hnoct);
+    }
+
+    let estado='Normal';
+    if(!esLab)estado='No laboral';
+    else if(sinSalida)estado='Sin salida';
+    else if(tardanza>0&&extrasMin>0)estado='Tardanza + Extras';
+    else if(tardanza>0)estado='Tardanza';
+    else if(extrasMin>0)estado='Con extras';
+
+    resultados.push({
+      id:empId+'_'+dkey(date),
+      empId,empNom:emp?.nombre||empNom,
+      sedeId,sedeNom:sede.nombre,
+      fecha:dkey(date),dia:DIAS_FULL[dow],diaCort:DIAS[dow],
+      entrada:fmtT(p),
+      salida:sinSalida?'--:--':fmtT(u),
+      sinSalida,
+      tardanza,almTom,
+      trabajadasNeto,
+      extrasMin:extrasMin??0,heDiur,heNoct,
+      estado,esLab,
+    });
+  });
+
+  pfill.style.width='75%';
+  await dbClear('resultados');
+  for(const r of resultados)await dbPut('resultados',r);
+  S.resultados=resultados;
+
+  const meses=[...new Set(resultados.map(r=>r.fecha.slice(0,7)))].sort();
+  ['rf-mes','xf-mes'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const v=el.value;el.innerHTML='<option value="">Todos los meses</option>';
+    meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;el.appendChild(o);});
+    if(v)el.value=v;
+  });
+  fillSelects();
+  pfill.style.width='100%';
+  setTimeout(()=>pbar.style.display='none',600);
+  renderStats();renderRes();
+  spill('ok',`${resultados.length} días procesados`);
+  toast(`Procesados ${resultados.length} registros`,'success');
+  go('resultados',document.querySelector('[data-sec=resultados]'));
+}
+
+// ══════════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════════
+function renderStats(){
+  const r=S.resultados.filter(x=>x.esLab);
+  const te=r.reduce((s,x)=>s+x.extrasMin,0);
+  const tt=r.reduce((s,x)=>s+x.tardanza,0);
+  const hd=r.reduce((s,x)=>s+x.heDiur,0);
+  const hn=r.reduce((s,x)=>s+x.heNoct,0);
+  document.getElementById('stats-area').innerHTML=`<div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Días laborales</div><div class="stat-val">${r.length}</div><div class="stat-sub">procesados</div></div>
+    <div class="stat-card red"><div class="stat-label">Total HH.EE</div><div class="stat-val">${(te/60).toFixed(1)}h</div><div class="stat-sub">${r.filter(x=>x.extrasMin>0).length} días con extras</div></div>
+    <div class="stat-card amber"><div class="stat-label">Tardanzas</div><div class="stat-val">${r.filter(x=>x.tardanza>0).length}</div><div class="stat-sub">${m2hm(tt)} acumulado</div></div>
+    <div class="stat-card blue"><div class="stat-label">HE Diurnas</div><div class="stat-val">${(hd/60).toFixed(1)}h</div><div class="stat-sub">${m2hm(hd)}</div></div>
+    <div class="stat-card purple"><div class="stat-label">HE Nocturnas</div><div class="stat-val">${(hn/60).toFixed(1)}h</div><div class="stat-sub">${m2hm(hn)}</div></div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════
+//  TABLA RESULTADOS
+// ══════════════════════════════════════════
+const EBADGE={
+  'Normal':'<span class="badge badge-green">Normal</span>',
+  'Con extras':'<span class="badge badge-amber">Con extras</span>',
+  'Tardanza':'<span class="badge badge-red">Tardanza</span>',
+  'Tardanza + Extras':'<span class="badge badge-red">T+HE</span>',
+  'Sin salida':'<span class="badge badge-gray">Sin salida</span>',
+  'Incompleto':'<span class="badge badge-gray">Incompleto</span>',
+};
+function renderRes(){
+  const q=(document.getElementById('rf-q')?.value||'').toLowerCase();
+  const sfRaw2=document.getElementById('rf-sede')?.value||'';
+  const sf=sfRaw2||sedeActiva||'';
+  const mf=document.getElementById('rf-mes')?.value||'';
+  const tf=document.getElementById('rf-tipo')?.value||'';
+  const f=S.resultados.filter(r=>{
+    if(!r.esLab)return false;
+    if(sf&&r.sedeId!==sf)return false;
+    if(mf&&!r.fecha.startsWith(mf))return false;
+    if(q&&!r.empNom.toLowerCase().includes(q)&&!r.empId.includes(q))return false;
+    if(tf==='extras'&&r.extrasMin<=0)return false;
+    if(tf==='tardanza'&&r.tardanza<=0)return false;
+    if(tf==='incompleto'&&r.estado!=='Sin salida')return false;
+    return true;
+  });
+  const tb=document.getElementById('rtb');
+  if(!f.length){tb.innerHTML='<tr><td colspan="13"><div class="empty-state"><div class="eico">📊</div><p>Sin resultados para los filtros.</p></div></td></tr>';return;}
+  tb.innerHTML=f.map(r=>{
+    const ss=r.sinSalida;
+    return`<tr>
+      <td class="name">${r.empNom}</td>
+      <td style="color:var(--muted2);font-size:11px;">${r.sedeNom}</td>
+      <td style="font-size:11px;">${fmtFecha(r.fecha)}</td>
+      <td style="color:var(--muted);">${r.diaCort}</td>
+      <td>${r.entrada}</td>
+      <td ${ss?'style="color:var(--muted)"':''}>${ss?'no marcó':''}${!ss?r.salida:''}</td>
+      <td class="${!ss&&r.trabajadasNeto>0?'':'rn'}">${ss?'<span style="color:var(--muted)">no marcó salida</span>':m2hm(r.trabajadasNeto)}</td>
+      <td class="${r.tardanza>0?'rt':'rn'}">${r.tardanza>0?m2hm(r.tardanza):'00h 00m'}</td>
+      <td class="${r.almTom>0?'rg':'rn'}">${m2hm(r.almTom)}</td>
+      <td class="${r.heDiur>0?'rx':'rn'}">${m2hm(r.heDiur)}</td>
+      <td style="${r.heNoct>0?'color:var(--accent3);font-weight:600':'color:var(--muted2)'}">${m2hm(r.heNoct)}</td>
+      <td class="${r.extrasMin>0?'rx':'rn'}" style="font-weight:700;">${ss?'<span style="color:var(--muted)">no marcó salida</span>':m2hm(r.extrasMin)}</td>
+      <td>${EBADGE[r.estado]||r.estado}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+//  CONSOLIDADO
+// ══════════════════════════════════════════
+function renderConsol(){
+  if(!S.resultados.length)return;
+  const m={};
+  const sfC=sedeActiva||'';
+  S.resultados.filter(r=>r.esLab&&(!sfC||r.sedeId===sfC)).forEach(r=>{
+    if(!m[r.empId])m[r.empId]={nom:r.empNom,sede:r.sedeNom,ext:0,tard:0,hd:0,hn:0,dias:0};
+    const e=m[r.empId];e.ext+=r.extrasMin;e.tard+=r.tardanza;e.hd+=r.heDiur;e.hn+=r.heNoct;e.dias++;
+  });
+  const rows=Object.values(m).sort((a,b)=>b.ext-a.ext);
+  document.getElementById('consol-area').innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Empleado</th><th>Sede</th><th>Días</th><th>HE Total</th><th>HE Diurnas</th><th>HE Nocturnas</th><th>Tardanzas</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td class="name">${r.nom}</td>
+      <td style="color:var(--muted2);font-size:11px;">${r.sede}</td>
+      <td>${r.dias}</td>
+      <td class="${r.ext>0?'rx':'rn'}" style="font-weight:700;">${m2hm(r.ext)}</td>
+      <td class="${r.hd>0?'rx':'rn'}">${m2hm(r.hd)}</td>
+      <td style="${r.hn>0?'color:var(--accent3)':'color:var(--muted2)'}">${m2hm(r.hn)}</td>
+      <td class="${r.tard>0?'rt':'rn'}">${m2hm(r.tard)}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+// ══════════════════════════════════════════
+//  EXPORTAR
+// ══════════════════════════════════════════
+function getXData(){
+  const sfRaw3=document.getElementById('xf-sede')?.value||'';
+  const sf=sfRaw3||sedeActiva||'';
+  const mf=document.getElementById('xf-mes')?.value||'';
+  return S.resultados.filter(r=>r.esLab&&(!sf||r.sedeId===sf)&&(!mf||r.fecha.startsWith(mf)));
+}
+
+// ── Estilos Excel compartidos ──
+function makeHeaderStyle(bgHex,fgHex='FFFFFF'){
+  return{font:{bold:true,color:{rgb:fgHex}},fill:{fgColor:{rgb:bgHex}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}};
+}
+function makeCellStyle(align='center'){
+  return{alignment:{horizontal:align,vertical:'center'},border:{top:{style:'thin',color:{rgb:'EEEEEE'}},bottom:{style:{style:'thin'},color:{rgb:'EEEEEE'}},left:{style:'thin',color:{rgb:'EEEEEE'}},right:{style:'thin',color:{rgb:'EEEEEE'}}}};
+}
+
+// ── Hoja tipo "Reporte de Horas Extras" por empleado ──
+function buildSheetEmpleado(empNom, rows, opts){
+  const {incT,incG,incTrab}=opts;
+  const aoa=[];
+  // Título
+  aoa.push(['Reporte de Horas Extras']);
+  aoa.push([`Colaborador: ${empNom}`]);
+  aoa.push([]);
+  // Cabecera
+  const cab=['Fecha','Día','Entrada','Salida'];
+  if(incTrab)cab.push('Horas trabajadas');
+  if(incT)cab.push('Tardanza');
+  cab.push('Horas extras');
+  aoa.push(cab);
+  // Filas
+  for(const r of rows){
+    const ss=r.sinSalida;
+    const fila=[fmtFecha(r.fecha),r.dia,r.entrada,ss?'--:--':r.salida];
+    if(incTrab)fila.push(ss?'no marcó salida':m2hm(r.trabajadasNeto));
+    if(incT)fila.push(r.tardanza>0?m2hm(r.tardanza):'00h 00m');
+    fila.push(ss?'no marcó salida':m2hm(r.extrasMin));
+    aoa.push(fila);
+  }
+  aoa.push([]);
+  // Totales
+  const totalDias=rows.length;
+  const totalExtras=rows.filter(r=>!r.sinSalida).reduce((s,r)=>s+r.extrasMin,0);
+  aoa.push([`Total de días registrados: ${totalDias}`]);
+  aoa.push([`Total horas extras: ${m2hm(totalExtras)}`]);
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+
+  // Anchos de columna
+  ws['!cols']=[{wch:14},{wch:12},{wch:9},{wch:9},{wch:18},{wch:14},{wch:16}];
+
+  // Merge título y colaborador
+  const lastCol=cab.length-1;
+  ws['!merges']=[
+    {s:{r:0,c:0},e:{r:0,c:lastCol}},
+    {s:{r:1,c:0},e:{r:1,c:lastCol}},
+  ];
+
+  // Estilos básicos (XLSX.js no aplica estilos en la versión gratuita, pero los deja listos si se usa xlsx-style)
+  return ws;
+}
+
+async function exportXLSX(){
+  if(!S.resultados.length){toast('Sin datos','error');return;}
+  const data=getXData();
+  const formato=document.getElementById('xf-formato').value;
+  const incT=document.getElementById('xc-t').checked;
+  const incG=document.getElementById('xc-g').checked;
+  const incD=document.getElementById('xc-d').checked;
+  const incTrab=document.getElementById('xc-trab').checked;
+  const opts={incT,incG,incD,incTrab};
+
+  if(formato==='por_empleado'){
+    // Group by sede → one workbook per sede, one sheet per employee
+    const bySede={};
+    data.forEach(r=>{
+      if(!bySede[r.sedeId]) bySede[r.sedeId]={nom:r.sedeNom,emps:{}};
+      if(!bySede[r.sedeId].emps[r.empId]) bySede[r.sedeId].emps[r.empId]={nom:r.empNom,rows:[]};
+      bySede[r.sedeId].emps[r.empId].rows.push(r);
+    });
+    let totalEmps=0;
+    for(const [,sedeData] of Object.entries(bySede)){
+      const wb=XLSX.utils.book_new();
+      for(const [,empData] of Object.entries(sedeData.emps)){
+        empData.rows.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+        const ws=buildSheetEmpleado(empData.nom,empData.rows,opts);
+        const shName=empData.nom.substring(0,31).replace(/[\\/\?\*\[\]:]/g,'_');
+        XLSX.utils.book_append_sheet(wb,ws,shName);
+        totalEmps++;
+      }
+      const fname='reporte_'+sedeData.nom.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
+      XLSX.writeFile(wb,fname);
+    }
+    toast(`${totalEmps} empleados exportados en ${Object.keys(bySede).length} archivo(s)`,'success');
+
+  } else {
+    // Consolidado clásico
+    const det=data.map(r=>{
+      const ss=r.sinSalida;
+      const o={'Empleado':r.empNom,'ID':r.empId,'Sede':r.sedeNom,'Fecha':fmtFecha(r.fecha),'Día':r.dia,'Entrada':r.entrada,'Salida':ss?'no marcó salida':r.salida};
+      if(incTrab)o['Horas trabajadas']=ss?'no marcó salida':m2hm(r.trabajadasNeto);
+      if(incT)o['Tardanza']=m2hm(r.tardanza);
+      if(incG)o['Almuerzo (min)']=r.almTom;
+      if(incD){o['HE Diurnas']=m2hm(r.heDiur);o['HE Nocturnas']=m2hm(r.heNoct);}
+      o['Total HE']=ss?'no marcó salida':m2hm(r.extrasMin);
+      o['Estado']=r.estado;
+      return o;
+    });
+    const byEmp2={};
+    data.forEach(r=>{
+      if(!byEmp2[r.empId])byEmp2[r.empId]={'Empleado':r.empNom,'ID':r.empId,'Sede':r.sedeNom,'Días':0,'HE Total':'','HE Diurnas':'','HE Nocturnas':'','Tardanza total':'',_ext:0,_hd:0,_hn:0,_t:0};
+      const e=byEmp2[r.empId];e['Días']++;e._ext+=r.extrasMin;e._hd+=r.heDiur;e._hn+=r.heNoct;e._t+=r.tardanza;
+    });
+    const cons=Object.values(byEmp2).map(e=>({...e,'HE Total':m2hm(e._ext),'HE Diurnas':m2hm(e._hd),'HE Nocturnas':m2hm(e._hn),'Tardanza total':m2hm(e._t)}));
+    ['_ext','_hd','_hn','_t'].forEach(k=>cons.forEach(e=>delete e[k]));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(det),'Detalle Diario');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(cons),'Por Empleado');
+    XLSX.writeFile(wb,`horas_extras_consolidado_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast('Excel consolidado exportado','success');
+  }
+}
+
+function exportCSV(){
+  if(!S.resultados.length){toast('Sin datos','error');return;}
+  const data=getXData();
+  const heads=['Empleado','ID','Sede','Fecha','Día','Entrada','Salida','Horas trabajadas','Tardanza','Almuerzo min','HE Diurnas','HE Nocturnas','Total HE','Estado'];
+  let csv=heads.join(',')+'\n';
+  data.forEach(r=>{
+    const ss=r.sinSalida;
+    csv+=`"${r.empNom}","${r.empId}","${r.sedeNom}","${fmtFecha(r.fecha)}","${r.dia}","${r.entrada}","${ss?'no marcó salida':r.salida}","${ss?'no marcó salida':m2hm(r.trabajadasNeto)}","${m2hm(r.tardanza)}","${r.almTom}","${m2hm(r.heDiur)}","${m2hm(r.heNoct)}","${ss?'no marcó salida':m2hm(r.extrasMin)}","${r.estado}"\n`;
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`horas_extras_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('CSV exportado','success');
+}
+</script>
+</body>
+</html>
