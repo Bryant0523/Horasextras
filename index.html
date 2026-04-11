@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rook</title>
+<title>Rook Hours</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" sizes="32x32" href="image/favicon-32x32.png">
 <link rel="manifest" href="image/site.webmanifest">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 /* ── TOKENS ── */
@@ -195,7 +196,19 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
 .sede-selector select{background:var(--card);border:1px solid var(--border2);color:var(--text);padding:6px 12px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;cursor:pointer;min-width:160px;}
 .sede-selector select:focus{border-color:var(--accent);}
 .sede-badge{background:rgba(0,165,114,.12);color:var(--accent);border:1px solid rgba(0,165,114,.25);padding:4px 12px;border-radius:20px;font-size:11px;font-family:'DM Mono',monospace;font-weight:600;white-space:nowrap;}
-/* PAGINACIÓN */
+/* NOTAS inline */
+.nota-btn{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.nota-btn:hover{border-color:var(--accent3);color:var(--accent3);}
+.nota-btn.has-nota{border-color:var(--accent3);color:var(--accent3);background:rgba(123,140,255,.08);}
+.nota-popup{position:fixed;z-index:300;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:14px;width:280px;box-shadow:0 8px 32px var(--shadow);}
+.nota-popup textarea{width:100%;background:var(--input-bg);border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:8px;font-size:12px;font-family:'DM Mono',monospace;resize:vertical;min-height:70px;outline:none;}
+.nota-popup textarea:focus{border-color:var(--accent3);}
+.badge-purple{background:rgba(168,85,247,.12);color:#a855f7;border-radius:20px;font-size:11px;font-family:'DM Mono',monospace;padding:2px 9px;display:inline-block;}
+/* Rango de fechas */
+.date-range{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.date-range input[type=date]{background:var(--card);border:1px solid var(--border2);color:var(--text);padding:6px 8px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;}
+.date-range input[type=date]:focus{border-color:var(--accent);}
+.date-range span{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
 .pagination{display:flex;align-items:center;gap:6px;margin-top:14px;flex-wrap:wrap;}
 .page-btn{background:var(--card);border:1px solid var(--border2);color:var(--muted2);padding:5px 11px;border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;cursor:pointer;transition:all .15s;}
 .page-btn:hover{border-color:var(--accent);color:var(--accent);}
@@ -290,9 +303,10 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
 
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
-  <div class="logo-mark">
-  <img src="image/Captura-de-pantalla-2026-04-10-125337.svg" alt="Logo" class="logo-img">
-</div>
+  <div class="logo">
+    <div class="logo-mark">HH.EE · Hikvision</div>
+    <h1>Control de<br>Horas Extras</h1>
+  </div>
   <nav class="nav">
     <div class="nav-sec-label">Configuración</div>
     <a class="nav-item active" data-sec="sedes"     onclick="go('sedes',this)">    <span class="ico">🏢</span>Sedes y Horarios</a>
@@ -301,7 +315,8 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
     <a class="nav-item"        data-sec="dashboard" onclick="go('dashboard',this)"><span class="ico">📈</span>Dashboard</a>
     <a class="nav-item"        data-sec="importar"  onclick="go('importar',this)"> <span class="ico">📁</span>Importar CSV</a>
     <a class="nav-item"        data-sec="resultados"onclick="go('resultados',this)"><span class="ico">📊</span>Resultados</a>
-    <a class="nav-item"        data-sec="llegadas"  onclick="go('llegadas',this)">  <span class="ico">🕐</span>Reporte Llegadas</a>
+    <a class="nav-item"        data-sec="ausencias"  onclick="go('ausencias',this)"> <span class="ico">🚫</span>Ausencias</a>
+    <a class="nav-item"        data-sec="llegadas"   onclick="go('llegadas',this)">  <span class="ico">🕐</span>Reporte Llegadas</a>
     <div class="nav-sec-label">Exportar</div>
     <a class="nav-item"        data-sec="exportar"  onclick="go('exportar',this)"> <span class="ico">⬇️</span>Exportar Excel</a>
     <div class="nav-sec-label" style="margin-top:auto;padding-top:16px;">Datos</div>
@@ -341,7 +356,7 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
           </div>
           <div class="form-group">
             <label>Tolerancia llegada (minutos)</label>
-            <input id="s-tol" type="number" value="10" min="0" max="60">
+            <input id="s-tol" type="number" value="0" min="0" max="60">
           </div>
           <div class="form-group">
             <label>Mínimo para contar horas extras (minutos)</label>
@@ -350,7 +365,7 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
           </div>
           <div class="form-group">
             <label>Hora extras nocturnas desde</label>
-            <input id="s-noct" type="time" value="21:00">
+            <input id="s-noct" type="time" value="19:00">
           </div>
           <div class="form-group">
             <label>Valor hora ordinaria (COP) — para recargos</label>
@@ -558,11 +573,16 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
           <input id="rf-q" type="text" placeholder="Buscar empleado…" oninput="renderRes()" style="flex:1;min-width:150px;">
           <select id="rf-sede" onchange="renderRes()"><option value="">Todas las sedes</option></select>
           <select id="rf-mes" onchange="renderRes()"><option value="">Todos los meses</option></select>
+          <div class="date-range">
+            <input type="date" id="rf-desde" onchange="renderRes()" title="Desde">
+            <span>–</span>
+            <input type="date" id="rf-hasta" onchange="renderRes()" title="Hasta">
+          </div>
           <select id="rf-tipo" onchange="renderRes()">
             <option value="">Todos</option>
             <option value="extras">Con HH.EE</option>
             <option value="tardanza">Con tardanza</option>
-            <option value="incompleto">Incompleto</option>
+            <option value="incompleto">Sin salida</option>
           </select>
         </div>
         <div class="table-wrap"><table>
@@ -571,9 +591,9 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
             <th>Entrada</th><th>Salida</th><th>Horas trabajadas</th>
             <th>Tardanza</th><th>Almuerzo</th>
             <th>HE Diurnas</th><th>HE Nocturnas</th>
-            <th>Total HE</th><th>Estado</th>
+            <th>Total HE</th><th>Estado</th><th>Nota</th>
           </tr></thead>
-          <tbody id="rtb"><tr><td colspan="13"><div class="empty-state"><div class="eico">📊</div><p>Importa y procesa un CSV primero.</p></div></td></tr></tbody>
+          <tbody id="rtb"><tr><td colspan="14"><div class="empty-state"><div class="eico">📊</div><p>Importa y procesa un CSV primero.</p></div></td></tr></tbody>
         </table></div>
         <div id="res-pagination" class="pagination"></div>
       </div>
@@ -625,13 +645,19 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
           <input id="lf-q" type="text" placeholder="Buscar empleado…" oninput="renderLlegadas()" style="flex:1;min-width:150px;">
           <select id="lf-sede" onchange="renderLlegadas()"><option value="">Todas las sedes</option></select>
           <select id="lf-mes"  onchange="renderLlegadas()"><option value="">Todos los meses</option></select>
+          <div class="date-range">
+            <input type="date" id="lf-desde" onchange="renderLlegadas()" title="Desde">
+            <span>–</span>
+            <input type="date" id="lf-hasta" onchange="renderLlegadas()" title="Hasta">
+          </div>
           <select id="lf-tipo" onchange="renderLlegadas()">
             <option value="">Todos</option>
             <option value="puntual">Puntual</option>
             <option value="tarde">Tarde</option>
             <option value="sin_salida">Sin salida</option>
           </select>
-          <button class="btn btn-primary btn-sm" onclick="exportLlegadasXLSX()">📥 Exportar Excel</button>
+          <button class="btn btn-primary btn-sm" onclick="exportLlegadasXLSX()">📥 Excel</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportLlegadasPDF()">📄 PDF</button>
         </div>
         <div class="table-wrap"><table>
           <thead><tr>
@@ -647,6 +673,39 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
       <div class="card">
         <div class="card-title">📋 Resumen de puntualidad por empleado</div>
         <div id="llegadas-resumen"></div>
+      </div>
+    </section>
+
+    <!-- ═══ AUSENCIAS ═══ -->
+    <section class="section" id="sec-ausencias">
+      <div id="aus-stats-area"></div>
+      <div class="card">
+        <div class="card-title">🚫 Días laborables sin registro</div>
+        <p class="help-text" style="margin-bottom:14px;">Se muestran todos los días laborables (según el horario de cada empleado) para los que <strong>no existe ningún registro</strong> en el CSV importado. Esto puede indicar ausencia, olvido de fichar, o día no trabajado.</p>
+        <div class="filter-bar">
+          <input id="af-q" type="text" placeholder="Buscar empleado…" oninput="renderAusencias()" style="flex:1;min-width:150px;">
+          <select id="af-sede" onchange="renderAusencias()"><option value="">Todas las sedes</option></select>
+          <select id="af-mes"  onchange="renderAusencias()"><option value="">Todos los meses</option></select>
+          <div class="date-range">
+            <input type="date" id="af-desde" onchange="renderAusencias()" title="Desde">
+            <span>–</span>
+            <input type="date" id="af-hasta" onchange="renderAusencias()" title="Hasta">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="exportAusenciasXLSX()">📥 Excel</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportAusenciasPDF()">📄 PDF</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr>
+            <th>Empleado</th><th>Sede</th><th>Fecha</th><th>Día</th>
+            <th>Horario esperado</th><th>Horas contrato</th><th>Justificación</th>
+          </tr></thead>
+          <tbody id="aus-tb"><tr><td colspan="7"><div class="empty-state"><div class="eico">🚫</div><p>Procesa un CSV primero.</p></div></td></tr></tbody>
+        </table></div>
+        <div id="aus-pagination" class="pagination"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 Resumen de ausencias por empleado</div>
+        <div id="aus-resumen"></div>
       </div>
     </section>
 
@@ -674,6 +733,16 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
 </div>
 <div id="toast"></div>
 
+<!-- POPUP NOTA -->
+<div class="nota-popup" id="nota-popup" style="display:none;">
+  <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted2);margin-bottom:8px;" id="nota-popup-label">Nota</div>
+  <textarea id="nota-popup-text" placeholder="Ej: permiso médico, comisión, día libre pactado…" maxlength="200"></textarea>
+  <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end;">
+    <button class="btn btn-secondary btn-sm" onclick="closeNotaPopup()">Cancelar</button>
+    <button class="btn btn-primary btn-sm" onclick="saveNota()">Guardar</button>
+  </div>
+</div>
+
 <!-- MODAL LIMPIAR TODO -->
 <div class="modal-overlay" id="modal-clear">
   <div class="modal-box">
@@ -685,7 +754,9 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
     </div>
   </div>
 </div>
-
+<Footer style="display: flex; justify-content: center; align-items: center; padding: 12px 0; font-size: 12px; color: var(--muted);">
+  <p>Desarrollado por <a href="https://github.com/Bryant0523/Horasextras" target="_blank">Rook</a><img src="/image/favicon-32x32.png" alt="Rook"></p>
+</Footer>
 <script>
 // ══════════════════════════════════════════
 //  INDEXEDDB
@@ -754,7 +825,7 @@ function toggleTheme(){
 // ══════════════════════════════════════════
 //  NAV
 // ══════════════════════════════════════════
-const NTITLES={sedes:'Sedes y <span>Horarios</span>',empleados:'Gestión de <span>Empleados</span>',dashboard:'<span>Dashboard</span>',importar:'Importar <span>CSV</span>',resultados:'Ver <span>Resultados</span>',llegadas:'Reporte de <span>Llegadas</span>',exportar:'Exportar <span>Excel</span>'};
+const NTITLES={sedes:'Sedes y <span>Horarios</span>',empleados:'Gestión de <span>Empleados</span>',dashboard:'<span>Dashboard</span>',importar:'Importar <span>CSV</span>',resultados:'Ver <span>Resultados</span>',ausencias:'<span>Ausencias</span>',llegadas:'Reporte de <span>Llegadas</span>',exportar:'Exportar <span>Excel</span>'};
 
 function onSedeActivaChange(){
   sedeActiva = document.getElementById('sede-activa').value;
@@ -795,6 +866,7 @@ function go(name,el){
   if(['empleados','exportar'].includes(name)) fillSelects();
   if(name==='exportar') renderConsol();
   if(name==='dashboard'){ fillDashFilters(); renderDash(); }
+  if(name==='ausencias'){ fillAusenciasFilters(); renderAusencias(); }
   if(name==='llegadas'){ fillLlegadasFilters(); renderLlegadas(); }
   // Sync sede filter on navigate
   ['ef-sede','rf-sede','xf-sede'].forEach(id=>{
@@ -827,16 +899,18 @@ async function limpiarTodo(){
   await dbClear('resultados');
   S.resultados=[];
   S.rawRows=[];S.csvHdr=[];
+  _notas={};
   document.getElementById('prev-card').style.display='none';
   document.getElementById('csvf').value='';
   closeModal('modal-clear');
   renderStats();renderRes();
   spill('idle','Sin datos');
-  // Reset pagination state
-  _resPage=1;_llegPage=1;_resFiltered=[];_llegFiltered=[];
+  _resPage=1;_llegPage=1;_ausPage=1;_resFiltered=[];_llegFiltered=[];_ausFiltered=[];
   document.getElementById('res-pagination').innerHTML='';
   document.getElementById('llegadas-pagination').innerHTML='';
+  document.getElementById('aus-pagination').innerHTML='';
   document.getElementById('llegadas-stats-area').innerHTML='';
+  document.getElementById('aus-stats-area').innerHTML='';
   document.getElementById('stats-area').innerHTML='';
   document.getElementById('consol-area').innerHTML='<div class="empty-state"><div class="eico">📋</div><p>Procesa datos primero.</p></div>';
   toast('Resultados eliminados','success');
@@ -1449,10 +1523,14 @@ function renderRes(resetPage=true){
   const sf=sfRaw2||sedeActiva||'';
   const mf=document.getElementById('rf-mes')?.value||'';
   const tf=document.getElementById('rf-tipo')?.value||'';
+  const desde=document.getElementById('rf-desde')?.value||'';
+  const hasta=document.getElementById('rf-hasta')?.value||'';
   _resFiltered=S.resultados.filter(r=>{
     if(!r.esLab)return false;
     if(sf&&r.sedeId!==sf)return false;
     if(mf&&!r.fecha.startsWith(mf))return false;
+    if(desde&&r.fecha<desde)return false;
+    if(hasta&&r.fecha>hasta)return false;
     if(q&&!r.empNom.toLowerCase().includes(q)&&!r.empId.includes(q))return false;
     if(tf==='extras'&&r.extrasMin<=0)return false;
     if(tf==='tardanza'&&r.tardanza<=0)return false;
@@ -1462,7 +1540,7 @@ function renderRes(resetPage=true){
   if(resetPage) _resPage=1;
   const tb=document.getElementById('rtb');
   if(!_resFiltered.length){
-    tb.innerHTML='<tr><td colspan="13"><div class="empty-state"><div class="eico">📊</div><p>Sin resultados para los filtros.</p></div></td></tr>';
+    tb.innerHTML='<tr><td colspan="14"><div class="empty-state"><div class="eico">📊</div><p>Sin resultados para los filtros.</p></div></td></tr>';
     document.getElementById('res-pagination').innerHTML='';
     return;
   }
@@ -1470,6 +1548,7 @@ function renderRes(resetPage=true){
   const page=_resFiltered.slice(start,start+_resPageSize);
   tb.innerHTML=page.map(r=>{
     const ss=r.sinSalida;
+    const nota=_notas[r.id]||'';
     return`<tr>
       <td class="name">${r.empNom}</td>
       <td style="color:var(--muted2);font-size:11px;">${r.sedeNom}</td>
@@ -1484,6 +1563,7 @@ function renderRes(resetPage=true){
       <td style="${r.heNoct>0?'color:var(--accent3);font-weight:600':'color:var(--muted2)'}">${m2hm(r.heNoct)}</td>
       <td class="${r.extrasMin>0?'rx':'rn'}" style="font-weight:700;">${ss?'<span style="color:var(--muted)">no marcó salida</span>':m2hm(r.extrasMin)}</td>
       <td>${EBADGE[r.estado]||r.estado}</td>
+      <td><button class="nota-btn${nota?' has-nota':''}" onclick="openNotaPopup('${r.id}',event)" title="${nota||'Agregar nota'}">${nota?'📝 Ver':'＋ Nota'}</button></td>
     </tr>`;
   }).join('');
   renderPagination('res-pagination',_resFiltered.length,_resPage,_resPageSize,
@@ -2004,34 +2084,46 @@ function fillLlegadasFilters(){
 }
 
 // ── Paginación helper ──
+// Usa un dispatcher global en lugar de toString() de funciones
+const _paginationHandlers = {};
 function renderPagination(containerId, total, currentPage, pageSize, onPage, onSize){
-  const totalPages=Math.ceil(total/pageSize);
-  const el=document.getElementById(containerId);
-  if(!el)return;
-  if(totalPages<=1&&total<=pageSize){el.innerHTML='';return;}
-  const start=(currentPage-1)*pageSize+1;
-  const end=Math.min(currentPage*pageSize,total);
-  // Build page buttons — show max 7 around current
-  let pages=[];
-  if(totalPages<=7){for(let i=1;i<=totalPages;i++)pages.push(i);}
+  const totalPages = Math.ceil(total / pageSize);
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  if(totalPages <= 1 && total <= pageSize){ el.innerHTML=''; return; }
+  // Guardar handlers por containerId
+  _paginationHandlers[containerId] = { onPage, onSize };
+  const start = (currentPage-1)*pageSize + 1;
+  const end   = Math.min(currentPage*pageSize, total);
+  // Generar botones de página
+  let pages = [];
+  if(totalPages <= 7){ for(let i=1;i<=totalPages;i++) pages.push(i); }
   else{
-    pages=[1];
-    if(currentPage>3)pages.push('…');
-    for(let i=Math.max(2,currentPage-1);i<=Math.min(totalPages-1,currentPage+1);i++)pages.push(i);
-    if(currentPage<totalPages-2)pages.push('…');
+    pages = [1];
+    if(currentPage > 3) pages.push('…');
+    for(let i=Math.max(2,currentPage-1); i<=Math.min(totalPages-1,currentPage+1); i++) pages.push(i);
+    if(currentPage < totalPages-2) pages.push('…');
     pages.push(totalPages);
   }
-  el.innerHTML=`
-    <button class="page-btn" onclick="(${onPage.toString()})(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>
-    ${pages.map(p=>p==='…'
-      ?`<span style="color:var(--muted);font-family:'DM Mono',monospace;padding:0 4px;">…</span>`
-      :`<button class="page-btn${p===currentPage?' active':''}" onclick="(${onPage.toString()})(${p})">${p}</button>`
+  el.innerHTML = `
+    <button class="page-btn" ${currentPage===1?'disabled':''} onclick="_pgGo('${containerId}',${currentPage-1})">‹</button>
+    ${pages.map(p => p==='…'
+      ? `<span style="color:var(--muted);font-family:'DM Mono',monospace;padding:0 4px;">…</span>`
+      : `<button class="page-btn${p===currentPage?' active':''}" onclick="_pgGo('${containerId}',${p})">${p}</button>`
     ).join('')}
-    <button class="page-btn" onclick="(${onPage.toString()})(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>›</button>
+    <button class="page-btn" ${currentPage===totalPages?'disabled':''} onclick="_pgGo('${containerId}',${currentPage+1})">›</button>
     <span class="page-info">${start}–${end} de ${total}</span>
-    <select class="page-size-sel" onchange="(${onSize.toString()})(parseInt(this.value))">
+    <select class="page-size-sel" onchange="_pgSize('${containerId}',parseInt(this.value))">
       ${[25,50,100,200].map(s=>`<option value="${s}"${s===pageSize?' selected':''}>${s} / pág</option>`).join('')}
     </select>`;
+}
+function _pgGo(id, page){
+  const h = _paginationHandlers[id];
+  if(h) h.onPage(page);
+}
+function _pgSize(id, size){
+  const h = _paginationHandlers[id];
+  if(h) h.onSize(size);
 }
 
 let _llegPage=1, _llegPageSize=25, _llegFiltered=[];
@@ -2045,6 +2137,10 @@ function renderLlegadas(resetPage=true){
     if(!r.esLab)return false;
     if(sf&&r.sedeId!==sf)return false;
     if(mf&&!r.fecha.startsWith(mf))return false;
+    const desde=document.getElementById('lf-desde')?.value||'';
+    const hasta=document.getElementById('lf-hasta')?.value||'';
+    if(desde&&r.fecha<desde)return false;
+    if(hasta&&r.fecha>hasta)return false;
     if(q&&!r.empNom.toLowerCase().includes(q)&&!r.empId.includes(q))return false;
     if(tf==='puntual'&&r.tardanza>0)return false;
     if(tf==='tarde'&&r.tardanza<=0)return false;
@@ -2254,6 +2350,294 @@ function applyXlsxStyles(ws, aoa){
       if(ws[addr]){ws[addr].s={fill:{fgColor:{rgb:isEven?'F4FBF7':'FFFFFF'}},alignment:{horizontal:c===0?'left':'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'EEEEEE'}}}};}
     }
   }
+}
+
+// ══════════════════════════════════════════
+//  NOTAS / JUSTIFICACIONES
+// ══════════════════════════════════════════
+let _notas = {}; // { resultadoId: "texto" }
+let _notaCurrentId = null;
+
+function openNotaPopup(id, event){
+  _notaCurrentId = id;
+  const popup = document.getElementById('nota-popup');
+  const txt = document.getElementById('nota-popup-text');
+  const lbl = document.getElementById('nota-popup-label');
+  const r = S.resultados.find(x=>x.id===id);
+  lbl.textContent = r ? `${r.empNom} · ${fmtFecha(r.fecha)}` : 'Nota';
+  txt.value = _notas[id] || '';
+  // Position near the button
+  const btn = event.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  popup.style.display = 'block';
+  popup.style.top = Math.min(rect.bottom + 6, window.innerHeight - 180) + 'px';
+  popup.style.left = Math.min(rect.left, window.innerWidth - 300) + 'px';
+  txt.focus();
+  event.stopPropagation();
+}
+function closeNotaPopup(){
+  document.getElementById('nota-popup').style.display = 'none';
+  _notaCurrentId = null;
+}
+function saveNota(){
+  if(!_notaCurrentId) return;
+  const txt = document.getElementById('nota-popup-text').value.trim();
+  if(txt) _notas[_notaCurrentId] = txt;
+  else delete _notas[_notaCurrentId];
+  closeNotaPopup();
+  renderRes(false); // refresh sin resetear página
+  toast('Nota guardada','success');
+}
+// Cerrar popup al click fuera
+document.addEventListener('click', e=>{
+  const popup = document.getElementById('nota-popup');
+  if(popup && popup.style.display !== 'none' && !popup.contains(e.target)) closeNotaPopup();
+});
+
+// ══════════════════════════════════════════
+//  AUSENCIAS
+// ══════════════════════════════════════════
+let _ausPage=1, _ausPageSize=25, _ausFiltered=[];
+
+function fillAusenciasFilters(){
+  const aSede=document.getElementById('af-sede'); if(!aSede)return;
+  aSede.innerHTML='<option value="">Todas las sedes</option>';
+  S.sedes.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.nombre;aSede.appendChild(o);});
+  if(sedeActiva) aSede.value=sedeActiva;
+  const aMes=document.getElementById('af-mes');
+  aMes.innerHTML='<option value="">Todos los meses</option>';
+  const sf=aSede.value||'';
+  const meses=[...new Set(S.resultados.filter(r=>!sf||r.sedeId===sf).map(r=>r.fecha.slice(0,7)))].sort();
+  meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;aMes.appendChild(o);});
+}
+
+// Genera todos los días laborables esperados para todos los empleados
+// dentro del rango de fechas que cubre S.resultados
+function calcAusencias(){
+  if(!S.resultados.length || !S.empleados.length) return [];
+  // Determinar rango de fechas de los resultados
+  const fechas = S.resultados.map(r=>r.fecha).sort();
+  const minFecha = fechas[0], maxFecha = fechas[fechas.length-1];
+  // Set de días registrados por empId_fecha
+  const registrados = new Set(S.resultados.map(r=>r.empId+'_'+r.fecha));
+  const ausencias = [];
+  S.empleados.forEach(emp=>{
+    const sede = S.sedes.find(s=>s.id===emp.sedeId);
+    if(!sede) return;
+    // Iterar cada día entre minFecha y maxFecha
+    let cur = new Date(minFecha+'T00:00');
+    const fin = new Date(maxFecha+'T00:00');
+    while(cur <= fin){
+      const fechaStr = dkey(cur);
+      const dow = cur.getDay();
+      // Resolver horario vigente (igual que en procesar)
+      let diasSrc = sede.dias||{};
+      if(emp.diasPersonal) diasSrc = emp.diasPersonal;
+      if(emp.diasPersonalB && emp.hbDesde){
+        const dentroB = fechaStr>=emp.hbDesde && (!emp.hbHasta||fechaStr<=emp.hbHasta);
+        if(dentroB) diasSrc = emp.diasPersonalB;
+      }
+      const dc = diasSrc[dow];
+      const esLab = !!(dc?.activo);
+      // Si es laborable y NO hay registro → ausencia
+      if(esLab && !registrados.has(emp.id+'_'+fechaStr) && !esFestivo(fechaStr)){
+        const horas = dc ? ((t2m(dc.salida)-t2m(dc.entrada)-parseInt(dc.almuerzo||0))/60).toFixed(1) : '—';
+        ausencias.push({
+          empId: emp.id, empNom: emp.nombre,
+          sedeId: emp.sedeId, sedeNom: sede.nombre,
+          fecha: fechaStr, dia: DIAS_FULL[dow], diaCort: DIAS[dow],
+          horario: dc ? `${dc.entrada}–${dc.salida}` : '—',
+          horas,
+        });
+      }
+      cur.setDate(cur.getDate()+1);
+    }
+  });
+  return ausencias.sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.empNom.localeCompare(b.empNom));
+}
+
+function renderAusencias(resetPage=true){
+  const q=(document.getElementById('af-q')?.value||'').toLowerCase();
+  const sf=document.getElementById('af-sede')?.value||sedeActiva||'';
+  const mf=document.getElementById('af-mes')?.value||'';
+  const desde=document.getElementById('af-desde')?.value||'';
+  const hasta=document.getElementById('af-hasta')?.value||'';
+  if(resetPage) _ausPage=1;
+
+  const todas = calcAusencias();
+  _ausFiltered = todas.filter(a=>{
+    if(sf && a.sedeId!==sf) return false;
+    if(mf && !a.fecha.startsWith(mf)) return false;
+    if(desde && a.fecha<desde) return false;
+    if(hasta && a.fecha>hasta) return false;
+    if(q && !a.empNom.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  // Stats
+  const total=_ausFiltered.length;
+  const empsCon=[...new Set(_ausFiltered.map(a=>a.empId))].length;
+  const horasPerdidas=_ausFiltered.reduce((s,a)=>s+parseFloat(a.horas||0),0);
+  document.getElementById('aus-stats-area').innerHTML=`<div class="stats-grid" style="margin-bottom:18px;">
+    <div class="stat-card red"><div class="stat-label">Días ausentes</div><div class="stat-val">${total}</div><div class="stat-sub">sin registro</div></div>
+    <div class="stat-card amber"><div class="stat-label">Empleados afectados</div><div class="stat-val">${empsCon}</div><div class="stat-sub">con al menos 1 ausencia</div></div>
+    <div class="stat-card blue"><div class="stat-label">Horas no trabajadas</div><div class="stat-val">${horasPerdidas.toFixed(1)}h</div><div class="stat-sub">estimado contrato</div></div>
+  </div>`;
+
+  const tb=document.getElementById('aus-tb');
+  if(!_ausFiltered.length){
+    tb.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="eico">✅</div><p>Sin ausencias detectadas para estos filtros.</p></div></td></tr>';
+    document.getElementById('aus-pagination').innerHTML='';
+    document.getElementById('aus-resumen').innerHTML='';
+    return;
+  }
+  const start=(_ausPage-1)*_ausPageSize;
+  const page=_ausFiltered.slice(start,start+_ausPageSize);
+  tb.innerHTML=page.map(a=>{
+    const nota=_notas['aus_'+a.empId+'_'+a.fecha]||'';
+    return`<tr>
+      <td class="name">${a.empNom}</td>
+      <td style="color:var(--muted2);font-size:11px;">${a.sedeNom}</td>
+      <td style="font-size:11px;">${fmtFecha(a.fecha)}</td>
+      <td style="color:var(--muted);">${a.diaCort}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--muted2);">${a.horario}</td>
+      <td style="font-family:'DM Mono',monospace;">${a.horas}h</td>
+      <td><button class="nota-btn${nota?' has-nota':''}" onclick="openNotaAus('${a.empId}','${a.fecha}',event)" title="${nota||'Agregar justificación'}">${nota?'📝 '+nota.slice(0,18)+(nota.length>18?'…':''):'＋ Justificar'}</button></td>
+    </tr>`;
+  }).join('');
+  renderPagination('aus-pagination',_ausFiltered.length,_ausPage,_ausPageSize,
+    p=>{_ausPage=p;renderAusencias(false);},
+    sz=>{_ausPageSize=sz;_ausPage=1;renderAusencias(false);}
+  );
+
+  // Resumen por empleado
+  const byEmp={};
+  _ausFiltered.forEach(a=>{
+    if(!byEmp[a.empId])byEmp[a.empId]={nom:a.empNom,sede:a.sedeNom,dias:0,horas:0};
+    byEmp[a.empId].dias++;
+    byEmp[a.empId].horas+=parseFloat(a.horas||0);
+  });
+  document.getElementById('aus-resumen').innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Empleado</th><th>Sede</th><th>Días ausentes</th><th>Horas no trabajadas</th></tr></thead>
+    <tbody>${Object.values(byEmp).sort((a,b)=>b.dias-a.dias).map(e=>`<tr>
+      <td class="name">${e.nom}</td>
+      <td style="color:var(--muted2);font-size:11px;">${e.sede}</td>
+      <td style="color:var(--danger);font-weight:700;">${e.dias}</td>
+      <td style="font-family:'DM Mono',monospace;">${e.horas.toFixed(1)}h</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function openNotaAus(empId, fecha, event){
+  const key = 'aus_'+empId+'_'+fecha;
+  _notaCurrentId = key;
+  const popup = document.getElementById('nota-popup');
+  const txt = document.getElementById('nota-popup-text');
+  const lbl = document.getElementById('nota-popup-label');
+  const emp = S.empleados.find(e=>e.id===empId);
+  lbl.textContent = `Justificación · ${emp?.nombre||empId} · ${fmtFecha(fecha)}`;
+  txt.value = _notas[key] || '';
+  const btn = event.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  popup.style.display = 'block';
+  popup.style.top = Math.min(rect.bottom+6, window.innerHeight-180)+'px';
+  popup.style.left = Math.min(rect.left, window.innerWidth-300)+'px';
+  txt.focus();
+  event.stopPropagation();
+}
+
+function exportAusenciasXLSX(){
+  if(!_ausFiltered.length){toast('Sin ausencias para exportar','error');return;}
+  const wb=XLSX.utils.book_new();
+  const aoa=[];
+  aoa.push(['REPORTE DE AUSENCIAS']);
+  aoa.push([`Generado: ${new Date().toLocaleDateString('es-CO')}`]);
+  aoa.push([]);
+  aoa.push(['Empleado','Sede','Fecha','Día','Horario esperado','Horas contrato','Justificación']);
+  _ausFiltered.forEach(a=>{
+    const nota=_notas['aus_'+a.empId+'_'+a.fecha]||'';
+    aoa.push([a.empNom,a.sedeNom,fmtFecha(a.fecha),a.dia,a.horario,a.horas+'h',nota]);
+  });
+  aoa.push([]);
+  // Resumen
+  aoa.push(['RESUMEN POR EMPLEADO']);
+  aoa.push(['Empleado','Sede','Días ausentes','Horas no trabajadas']);
+  const byEmp={};
+  _ausFiltered.forEach(a=>{
+    if(!byEmp[a.empId])byEmp[a.empId]={nom:a.empNom,sede:a.sedeNom,dias:0,horas:0};
+    byEmp[a.empId].dias++;byEmp[a.empId].horas+=parseFloat(a.horas||0);
+  });
+  Object.values(byEmp).sort((a,b)=>b.dias-a.dias).forEach(e=>{
+    aoa.push([e.nom,e.sede,e.dias,e.horas.toFixed(1)+'h']);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:22},{wch:16},{wch:12},{wch:10},{wch:16},{wch:14},{wch:30}];
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
+  applyXlsxStyles(ws,aoa);
+  XLSX.utils.book_append_sheet(wb,ws,'Ausencias');
+  XLSX.writeFile(wb,`ausencias_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Reporte de ausencias exportado','success');
+}
+
+// ══════════════════════════════════════════
+//  EXPORTAR PDF (llegadas + ausencias)
+// ══════════════════════════════════════════
+function buildPDF(title, subtitle, headers, rows, filename){
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const accent = [0,165,114]; // #00A572
+  const dark   = [26,58,42];
+  const W = doc.internal.pageSize.getWidth();
+
+  // Header bar
+  doc.setFillColor(...dark);
+  doc.rect(0,0,W,20,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.text(title, 14, 13);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(subtitle, W-14, 13, {align:'right'});
+
+  // Table
+  doc.autoTable({
+    startY: 24,
+    head: [headers],
+    body: rows,
+    styles:{fontSize:8, cellPadding:2.5, textColor:[30,30,30]},
+    headStyles:{fillColor:accent, textColor:[255,255,255], fontStyle:'bold', halign:'center'},
+    alternateRowStyles:{fillColor:[244,251,247]},
+    columnStyles:{0:{fontStyle:'bold'}},
+    margin:{left:14,right:14},
+    didDrawPage:(data)=>{
+      // Footer
+      doc.setFontSize(7); doc.setTextColor(150,150,150);
+      doc.text(`Página ${data.pageNumber}  ·  Control HH.EE Hikvision  ·  ${new Date().toLocaleDateString('es-CO')}`,
+        W/2, doc.internal.pageSize.getHeight()-6, {align:'center'});
+    }
+  });
+  doc.save(filename);
+}
+
+function exportLlegadasPDF(){
+  if(!_llegFiltered.length){toast('Sin datos de llegadas','error');return;}
+  const headers=['Empleado','Sede','Fecha','Día','Entrada','Esp.','Dif. entrada','Salida','Esp.','Dif. salida','Horario','Estado'];
+  const rows=_llegFiltered.map(r=>{
+    const entEsp=r.entradaEsperada||'--:--';
+    const salEsp=r.salidaEsperada||'--:--';
+    const difEnt=r.tardanza===0?'Puntual':(r.tardanza>0?'+'+m2hm(r.tardanza)+' tarde':'-'+m2hm(Math.abs(r.tardanza))+' antes');
+    const difSal=r.sinSalida?'—':((t2m(r.salida)-t2m(salEsp))===0?'Puntual':((t2m(r.salida)-t2m(salEsp))>0?'+'+m2hm(t2m(r.salida)-t2m(salEsp))+' extra':'-'+m2hm(Math.abs(t2m(r.salida)-t2m(salEsp)))+' antes'));
+    return[r.empNom,r.sedeNom,fmtFecha(r.fecha),r.diaCort,r.entrada,entEsp,difEnt,r.sinSalida?'—':r.salida,salEsp,difSal,r.horarioUsado||'Sede',r.estado];
+  });
+  buildPDF('Reporte de Llegadas y Puntualidad',`Generado: ${new Date().toLocaleDateString('es-CO')} · ${_llegFiltered.length} registros`,headers,rows,`llegadas_${new Date().toISOString().slice(0,10)}.pdf`);
+  toast('PDF generado','success');
+}
+
+function exportAusenciasPDF(){
+  if(!_ausFiltered.length){toast('Sin ausencias para exportar','error');return;}
+  const headers=['Empleado','Sede','Fecha','Día','Horario esperado','Horas contrato','Justificación'];
+  const rows=_ausFiltered.map(a=>[a.empNom,a.sedeNom,fmtFecha(a.fecha),a.diaCort,a.horario,a.horas+'h',_notas['aus_'+a.empId+'_'+a.fecha]||'']);
+  buildPDF('Reporte de Ausencias',`Generado: ${new Date().toLocaleDateString('es-CO')} · ${_ausFiltered.length} ausencias`,headers,rows,`ausencias_${new Date().toISOString().slice(0,10)}.pdf`);
+  toast('PDF generado','success');
 }
 </script>
 </body>
