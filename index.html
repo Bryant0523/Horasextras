@@ -3,10 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rook Hours</title>
+<title>Control de Horas Extras — Hikvision</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="icon" type="image/png" sizes="32x32" href="image/favicon-32x32.png">
-<link rel="manifest" href="image/site.webmanifest">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -318,7 +316,8 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
     <a class="nav-item"        data-sec="ausencias"  onclick="go('ausencias',this)"> <span class="ico">🚫</span>Ausencias</a>
     <a class="nav-item"        data-sec="llegadas"   onclick="go('llegadas',this)">  <span class="ico">🕐</span>Reporte Llegadas</a>
     <div class="nav-sec-label">Exportar</div>
-    <a class="nav-item"        data-sec="exportar"  onclick="go('exportar',this)"> <span class="ico">⬇️</span>Exportar Excel</a>
+    <a class="nav-item"        data-sec="michel"    onclick="go('michel',this)">    <span class="ico">📋</span>Reporte Llegadas (Michel)</a>
+    <a class="nav-item"        data-sec="exportar"  onclick="go('exportar',this)">  <span class="ico">⬇️</span>Exportar Excel/PDF</a>
     <div class="nav-sec-label" style="margin-top:auto;padding-top:16px;">Datos</div>
     <a class="nav-item" onclick="confirmarLimpiarTodo()" style="color:var(--danger);border-left-color:transparent;">
       <span class="ico">🗑</span>Limpiar todos los datos
@@ -356,7 +355,15 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
           </div>
           <div class="form-group">
             <label>Tolerancia llegada (minutos)</label>
-            <input id="s-tol" type="number" value="0" min="0" max="60">
+            <input id="s-tol" type="number" value="10" min="0" max="60">
+          </div>
+          <div class="form-group">
+            <label>Contabilizar entrada anticipada como HH.EE</label>
+            <select id="s-antici">
+              <option value="0">No (ignorar entradas antes del horario)</option>
+              <option value="1">Sí (contar minutos antes de la hora de entrada)</option>
+            </select>
+            <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:3px;">Actívalo para enfermeros, recepcionistas, etc. que entran antes por indicación del jefe</span>
           </div>
           <div class="form-group">
             <label>Mínimo para contar horas extras (minutos)</label>
@@ -365,7 +372,7 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
           </div>
           <div class="form-group">
             <label>Hora extras nocturnas desde</label>
-            <input id="s-noct" type="time" value="19:00">
+            <input id="s-noct" type="time" value="21:00">
           </div>
           <div class="form-group">
             <label>Valor hora ordinaria (COP) — para recargos</label>
@@ -599,6 +606,26 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
       </div>
     </section>
 
+    <!-- ═══ REPORTE MICHEL ═══ -->
+    <section class="section" id="sec-michel">
+      <div class="card">
+        <div class="card-title">📋 Reporte de Horas de Llegada</div>
+        <p class="help-text" style="margin-bottom:14px;">Una tabla por empleado con Fecha, Día y Hora de Llegada. Las filas en rojo indican llegada tarde. Total de días al pie de cada tabla.</p>
+        <div class="filter-bar">
+          <select id="mf-sede" onchange="renderMichel()"><option value="">Todas las sedes</option></select>
+          <select id="mf-mes"  onchange="renderMichel()"><option value="">Todos los meses</option></select>
+          <div class="date-range">
+            <input type="date" id="mf-desde" onchange="renderMichel()" title="Desde">
+            <span>–</span>
+            <input type="date" id="mf-hasta" onchange="renderMichel()" title="Hasta">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="exportMichelXLSX()">📥 Excel</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportMichelPDF()">📄 PDF</button>
+        </div>
+        <div id="michel-area"><div class="empty-state"><div class="eico">📋</div><p>Procesa un CSV primero.</p></div></div>
+      </div>
+    </section>
+
     <!-- ═══ EXPORTAR ═══ -->
     <section class="section" id="sec-exportar">
       <div class="card">
@@ -623,6 +650,7 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
         </div>
         <div class="btn-row">
           <button class="btn btn-primary" onclick="exportXLSX()">📥 Exportar .xlsx</button>
+          <button class="btn btn-secondary" onclick="exportExtrassPDF()">📄 Exportar PDF</button>
           <button class="btn btn-secondary" onclick="exportCSV()">📄 Exportar .csv</button>
         </div>
         <p class="help-text" style="margin-top:12px;">
@@ -658,6 +686,7 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
           </select>
           <button class="btn btn-primary btn-sm" onclick="exportLlegadasXLSX()">📥 Excel</button>
           <button class="btn btn-secondary btn-sm" onclick="exportLlegadasPDF()">📄 PDF</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportReporteMichel('xlsx')">👤 Reporte llegadas</button>
         </div>
         <div class="table-wrap"><table>
           <thead><tr>
@@ -754,9 +783,7 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
     </div>
   </div>
 </div>
-<Footer style="display: flex; justify-content: center; align-items: center; padding: 12px 0; font-size: 12px; color: var(--muted);">
-  <p>Desarrollado por <a href="https://github.com/Bryant0523/Horasextras" target="_blank">Rook</a><img src="/image/favicon-32x32.png" alt="Rook"></p>
-</Footer>
+
 <script>
 // ══════════════════════════════════════════
 //  INDEXEDDB
@@ -825,7 +852,7 @@ function toggleTheme(){
 // ══════════════════════════════════════════
 //  NAV
 // ══════════════════════════════════════════
-const NTITLES={sedes:'Sedes y <span>Horarios</span>',empleados:'Gestión de <span>Empleados</span>',dashboard:'<span>Dashboard</span>',importar:'Importar <span>CSV</span>',resultados:'Ver <span>Resultados</span>',ausencias:'<span>Ausencias</span>',llegadas:'Reporte de <span>Llegadas</span>',exportar:'Exportar <span>Excel</span>'};
+const NTITLES={sedes:'Sedes y <span>Horarios</span>',empleados:'Gestión de <span>Empleados</span>',dashboard:'<span>Dashboard</span>',importar:'Importar <span>CSV</span>',resultados:'Ver <span>Resultados</span>',ausencias:'<span>Ausencias</span>',llegadas:'Reporte de <span>Llegadas</span>',michel:'Reporte de <span>Llegadas (Michel)</span>',exportar:'Exportar <span>Excel / PDF</span>'};
 
 function onSedeActivaChange(){
   sedeActiva = document.getElementById('sede-activa').value;
@@ -868,6 +895,7 @@ function go(name,el){
   if(name==='dashboard'){ fillDashFilters(); renderDash(); }
   if(name==='ausencias'){ fillAusenciasFilters(); renderAusencias(); }
   if(name==='llegadas'){ fillLlegadasFilters(); renderLlegadas(); }
+  if(name==='michel'){ fillMichelFilters(); renderMichel(); }
   // Sync sede filter on navigate
   ['ef-sede','rf-sede','xf-sede'].forEach(id=>{
     const fEl=document.getElementById(id);
@@ -996,6 +1024,7 @@ const DEF_DIAS={
 async function guardarSede(){
   const nom=document.getElementById('s-nom').value.trim();
   const tol=parseInt(document.getElementById('s-tol').value)||0;
+  const antici=parseInt(document.getElementById('s-antici').value)||0;
   const minExt=parseInt(document.getElementById('s-minext').value)??15;
   const noct=document.getElementById('s-noct').value||'21:00';
   const vhora=parseFloat(document.getElementById('s-vhora').value)||0;
@@ -1003,7 +1032,7 @@ async function guardarSede(){
   if(!nom){toast('Escribe el nombre','error');return;}
   const dias=readDias('dr-','.dc','.de','.ds','.da');
   if(!Object.values(dias).some(d=>d.activo)){toast('Activa al menos un día','error');return;}
-  const s={id:eid||Date.now().toString(),nombre:nom,tolerancia:tol,minExt,hnoct:noct,vhora,dias};
+  const s={id:eid||Date.now().toString(),nombre:nom,tolerancia:tol,antici,minExt,hnoct:noct,vhora,dias};
   await dbPut('sedes',s);
   const i=S.sedes.findIndex(x=>x.id===s.id);
   if(i>=0)S.sedes[i]=s;else S.sedes.push(s);
@@ -1014,6 +1043,7 @@ function editSede(id){
   const s=S.sedes.find(x=>x.id===id);if(!s)return;
   document.getElementById('s-nom').value=s.nombre;
   document.getElementById('s-tol').value=s.tolerancia||10;
+  document.getElementById('s-antici').value=s.antici||0;
   document.getElementById('s-minext').value=s.minExt??15;
   document.getElementById('s-noct').value=s.hnoct||'21:00';
   document.getElementById('s-vhora').value=s.vhora||0;
@@ -1397,6 +1427,7 @@ async function procesar(){
     const almM=parseInt(dc?.almuerzo??60);
     const tolM=sede.tolerancia||0;
     const minExtM=sede.minExt??15;
+    const antici=sede.antici||0;  // 1 = contar entrada anticipada como HH.EE
     const hnoct=t2m(sede.hnoct||'21:00');
 
     const p=marks[0],u=marks[marks.length-1];
@@ -1424,13 +1455,18 @@ async function procesar(){
     // Trabajadas netas = bruto - almuerzo
     const trabajadasNeto=sinSalida?null:Math.max(0,trabajadasBruto-almTom);
 
-    // HH.EE — solo se cuentan si superan el umbral mínimo configurado
-    const rawExtras=sinSalida?null:Math.max(0,uM-salM);
-    const extrasMin=sinSalida?null:(rawExtras>=minExtM?rawExtras:0);
-    let heDiur=0,heNoct=0;
+    // HH.EE — minutos DESPUÉS de la salida + (si antici=1) minutos ANTES de la entrada
+    const extrasSalida = sinSalida ? null : Math.max(0, uM - salM);
+    const extrasEntrada = (antici && esLab && !sinSalida) ? Math.max(0, entM - pM) : 0;
+    const rawExtras = sinSalida ? null : (extrasSalida||0) + extrasEntrada;
+    const extrasMin = sinSalida ? null : (rawExtras >= minExtM ? rawExtras : 0);
+    let heDiur=0, heNoct=0;
     if(extrasMin>0){
-      heDiur=salM<hnoct?Math.min(extrasMin,hnoct-salM):0;
-      heNoct=Math.max(0,uM-hnoct);
+      // Diurnas: desde entrada anticipada hasta hora nocturna, y desde salida hasta nocturna
+      const extEnd = uM; // hora de salida real
+      const extStart = antici ? Math.min(pM, entM) : salM; // si anticipa, desde entrada real
+      heDiur = extStart < hnoct ? Math.min(extrasMin, hnoct - extStart) : 0;
+      heNoct = Math.max(0, extEnd - hnoct);
     }
 
     let estado='Normal';
@@ -1451,7 +1487,7 @@ async function procesar(){
       sinSalida,
       tardanza,almTom,
       trabajadasNeto,
-      extrasMin:extrasMin??0,heDiur,heNoct,
+      extrasMin:extrasMin??0,extrasEntrada,heDiur,heNoct,
       estado,esLab,
       horarioUsado,
       entradaEsperada:dc?.entrada||'--:--',
@@ -1619,42 +1655,54 @@ function makeCellStyle(align='center'){
 function buildSheetEmpleado(empNom, rows, opts){
   const {incT,incG,incTrab}=opts;
   const aoa=[];
-  // Título
   aoa.push(['Reporte de Horas Extras']);
   aoa.push([`Colaborador: ${empNom}`]);
   aoa.push([]);
-  // Cabecera
-  const cab=['Fecha','Día','Entrada','Salida'];
-  if(incTrab)cab.push('Horas trabajadas');
-  if(incT)cab.push('Tardanza');
+  const cab=['Fecha','Día de la Semana','Entrada','Salida'];
+  if(incTrab) cab.push('Horas trabajadas');
+  if(incT)    cab.push('Tardanza');
   cab.push('Horas extras');
   aoa.push(cab);
-  // Filas
   for(const r of rows){
     const ss=r.sinSalida;
     const fila=[fmtFecha(r.fecha),r.dia,r.entrada,ss?'--:--':r.salida];
-    if(incTrab)fila.push(ss?'no marcó salida':m2hm(r.trabajadasNeto));
-    if(incT)fila.push(r.tardanza>0?m2hm(r.tardanza):'00h 00m');
-    fila.push(ss?'no marcó salida':m2hm(r.extrasMin));
+    if(incTrab) fila.push(ss?'no marcó':m2hm(r.trabajadasNeto));
+    if(incT)    fila.push(r.tardanza>0?m2hm(r.tardanza):'00h 00m');
+    fila.push(ss?'no marcó':m2hm(r.extrasMin));
     aoa.push(fila);
   }
   aoa.push([]);
-  // Totales
   const totalDias=rows.length;
   const totalExtras=rows.filter(r=>!r.sinSalida).reduce((s,r)=>s+r.extrasMin,0);
   aoa.push([`Total de días registrados: ${totalDias}`]);
   aoa.push([`Total horas extras: ${m2hm(totalExtras)}`]);
-
   const ws=XLSX.utils.aoa_to_sheet(aoa);
-  // Anchos de columna
-  ws['!cols']=[{wch:14},{wch:12},{wch:9},{wch:9},{wch:18},{wch:14},{wch:16}];
-  // Merge título y colaborador
   const lastCol=cab.length-1;
-  ws['!merges']=[
-    {s:{r:0,c:0},e:{r:0,c:lastCol}},
-    {s:{r:1,c:0},e:{r:1,c:lastCol}},
-  ];
-  applyXlsxStyles(ws,aoa);
+  const ncols=cab.length;
+  ws['!cols']=[{wch:14},{wch:18},{wch:10},{wch:10},{wch:18},{wch:14},{wch:16},{wch:16}].slice(0,ncols);
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:lastCol}},{s:{r:1,c:0},e:{r:1,c:lastCol}}];
+  // Título
+  const tc=ws['A1'];if(tc)tc.s={font:{bold:true,sz:14,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A3A2A'}},alignment:{horizontal:'center',vertical:'center'}};
+  const cc=ws['A2'];if(cc)cc.s={font:{bold:true,sz:12,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A3A2A'}},alignment:{horizontal:'center',vertical:'center'}};
+  // Cabecera fila 3
+  for(let ci=0;ci<ncols;ci++){const a=XLSX.utils.encode_cell({r:3,c:ci});if(ws[a])ws[a].s={font:{bold:true,color:{rgb:'FFFFFF'},sz:11},fill:{fgColor:{rgb:'00A572'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:{bottom:{style:'medium',color:{rgb:'007A50'}}}};}
+  // Filas de datos desde fila 4
+  for(let ri=0;ri<rows.length;ri++){
+    const r=rows[ri];const esTarde=r.tardanza>0;const isEven=ri%2===0;
+    const bg=esTarde?'FFE5E5':(isEven?'F4FBF7':'FFFFFF');
+    const fontColor=esTarde?'CC0000':'222222';
+    for(let ci=0;ci<ncols;ci++){
+      const a=XLSX.utils.encode_cell({r:4+ri,c:ci});
+      if(ws[a])ws[a].s={fill:{fgColor:{rgb:bg}},font:{color:{rgb:fontColor},bold:ci===ncols-1&&r.extrasMin>0},alignment:{horizontal:ci<2?'left':'center',vertical:'center'},border:{bottom:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'EEEEEE'}}}};
+    }
+  }
+  // Totales
+  const tr1=4+rows.length+1,tr2=4+rows.length+2;
+  for(let ci=0;ci<ncols;ci++){
+    const a1=XLSX.utils.encode_cell({r:tr1,c:ci});const a2=XLSX.utils.encode_cell({r:tr2,c:ci});
+    if(ws[a1])ws[a1].s={font:{bold:true,color:{rgb:'1A3A2A'},sz:11},fill:{fgColor:{rgb:'E8F5EF'}},alignment:{horizontal:'left'}};
+    if(ws[a2])ws[a2].s={font:{bold:true,color:{rgb:'007A50'},sz:11},fill:{fgColor:{rgb:'E8F5EF'}},alignment:{horizontal:'left'}};
+  }
   return ws;
 }
 
@@ -2639,6 +2687,356 @@ function exportAusenciasPDF(){
   buildPDF('Reporte de Ausencias',`Generado: ${new Date().toLocaleDateString('es-CO')} · ${_ausFiltered.length} ausencias`,headers,rows,`ausencias_${new Date().toISOString().slice(0,10)}.pdf`);
   toast('PDF generado','success');
 }
+
+// ══════════════════════════════════════════
+//  REPORTE MICHEL — tabla por empleado
+// ══════════════════════════════════════════
+function fillMichelFilters(){
+  const mSede=document.getElementById('mf-sede'); if(!mSede)return;
+  mSede.innerHTML='<option value="">Todas las sedes</option>';
+  S.sedes.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.nombre;mSede.appendChild(o);});
+  if(sedeActiva) mSede.value=sedeActiva;
+  const mMes=document.getElementById('mf-mes');
+  mMes.innerHTML='<option value="">Todos los meses</option>';
+  const sf=mSede.value||'';
+  const meses=[...new Set(S.resultados.filter(r=>!sf||r.sedeId===sf).map(r=>r.fecha.slice(0,7)))].sort();
+  meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;mMes.appendChild(o);});
+}
+
+function getMichelData(){
+  const sf=document.getElementById('mf-sede')?.value||sedeActiva||'';
+  const mf=document.getElementById('mf-mes')?.value||'';
+  const desde=document.getElementById('mf-desde')?.value||'';
+  const hasta=document.getElementById('mf-hasta')?.value||'';
+  return S.resultados.filter(r=>{
+    if(!r.esLab) return false;
+    if(sf&&r.sedeId!==sf) return false;
+    if(mf&&!r.fecha.startsWith(mf)) return false;
+    if(desde&&r.fecha<desde) return false;
+    if(hasta&&r.fecha>hasta) return false;
+    return true;
+  }).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+}
+
+function renderMichel(){
+  const area=document.getElementById('michel-area');
+  if(!S.resultados.length){area.innerHTML='<div class="empty-state"><div class="eico">📋</div><p>Procesa un CSV primero.</p></div>';return;}
+  const data=getMichelData();
+  if(!data.length){area.innerHTML='<div class="empty-state"><div class="eico">📋</div><p>Sin registros para estos filtros.</p></div>';return;}
+
+  // Agrupar por empleado
+  const byEmp={};
+  data.forEach(r=>{
+    if(!byEmp[r.empId]) byEmp[r.empId]={nom:r.empNom,sede:r.sedeNom,rows:[]};
+    byEmp[r.empId].rows.push(r);
+  });
+
+  area.innerHTML=Object.values(byEmp).map(emp=>{
+    const filas=emp.rows.map(r=>{
+      const tarde=r.tardanza>0;
+      const estilo=tarde?'background:#FFF0F0;color:#c0392b;font-weight:600;':'';
+      return`<tr style="${estilo}">
+        <td style="padding:8px 12px;font-family:'DM Mono',monospace;font-size:12px;border-bottom:1px solid #eee;${tarde?'color:#c0392b;':''}">${fmtFecha(r.fecha)}</td>
+        <td style="padding:8px 12px;font-family:'DM Mono',monospace;font-size:12px;border-bottom:1px solid #eee;${tarde?'color:#c0392b;':''}">${r.dia}</td>
+        <td style="padding:8px 12px;font-family:'DM Mono',monospace;font-size:12px;border-bottom:1px solid #eee;font-weight:${tarde?'700':'400'};${tarde?'color:#c0392b;':''}">${r.entrada}${tarde?` <span style="font-size:10px;">(+${m2hm(r.tardanza)})</span>`:''}</td>
+      </tr>`;
+    }).join('');
+    return`<div class="card" style="margin-bottom:18px;max-width:480px;">
+      <div style="background:#1A3A2A;color:#fff;padding:12px 16px;border-radius:8px 8px 0 0;margin:-22px -22px 14px;">
+        <div style="font-size:10px;font-family:'DM Mono',monospace;letter-spacing:2px;opacity:.7;margin-bottom:2px;">REPORTE DE HORAS DE LLEGADA</div>
+        <div style="font-size:14px;font-weight:700;">Colaborador: ${emp.nom}</div>
+        <div style="font-size:11px;font-family:'DM Mono',monospace;opacity:.6;margin-top:2px;">${emp.sede}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="background:#00A572;">
+          <th style="padding:8px 12px;text-align:left;color:#fff;font-size:11px;font-family:'DM Mono',monospace;letter-spacing:1px;">Fecha</th>
+          <th style="padding:8px 12px;text-align:left;color:#fff;font-size:11px;font-family:'DM Mono',monospace;letter-spacing:1px;">Día de la Semana</th>
+          <th style="padding:8px 12px;text-align:left;color:#fff;font-size:11px;font-family:'DM Mono',monospace;letter-spacing:1px;">Hora de Llegada</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+        <tfoot><tr>
+          <td colspan="3" style="padding:10px 12px;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;border-top:2px solid #1A3A2A;color:#1A3A2A;">
+            Total de días registrados: ${emp.rows.length}
+          </td>
+        </tr></tfoot>
+      </table>
+    </div>`;
+  }).join('');
+}
+
+function exportMichelXLSX(){
+  const data=getMichelData();
+  if(!data.length){toast('Sin datos','error');return;}
+  const wb=XLSX.utils.book_new();
+  const byEmp={};
+  data.forEach(r=>{
+    if(!byEmp[r.empId]) byEmp[r.empId]={nom:r.empNom,sede:r.sedeNom,rows:[]};
+    byEmp[r.empId].rows.push(r);
+  });
+  Object.values(byEmp).forEach(emp=>{
+    const aoa=[];
+    aoa.push(['Reporte de Horas de Llegada']);
+    aoa.push([`Colaborador: ${emp.nom}`]);
+    aoa.push([]);
+    aoa.push(['Fecha','Día de la Semana','Hora de Llegada']);
+    emp.rows.forEach(r=>aoa.push([fmtFecha(r.fecha),r.dia,r.entrada]));
+    aoa.push([]);
+    aoa.push([`Total de días registrados: ${emp.rows.length}`]);
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:14},{wch:18},{wch:16}];
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
+    // Estilos
+    if(ws['A1']) ws['A1'].s={font:{bold:true,sz:13,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A3A2A'}},alignment:{horizontal:'center'}};
+    if(ws['A2']) ws['A2'].s={font:{bold:true,sz:11,color:{rgb:'1A3A2A'}},alignment:{horizontal:'center'}};
+    ['A4','B4','C4'].forEach(addr=>{if(ws[addr])ws[addr].s={font:{bold:true,color:{rgb:'FFFFFF'},sz:11},fill:{fgColor:{rgb:'00A572'}},alignment:{horizontal:'center'}};});
+    // Filas rojas para tardanzas
+    emp.rows.forEach((r,i)=>{
+      if(r.tardanza>0){
+        ['A','B','C'].forEach(col=>{
+          const addr=col+(i+5);
+          if(ws[addr]) ws[addr].s={fill:{fgColor:{rgb:'FFF0F0'}},font:{color:{rgb:'C0392B'},bold:true},alignment:{horizontal:'center'}};
+        });
+      } else {
+        ['A','B','C'].forEach(col=>{
+          const addr=col+(i+5);
+          if(ws[addr]) ws[addr].s={fill:{fgColor:{rgb:i%2===0?'F4FBF7':'FFFFFF'}},alignment:{horizontal:'center'}};
+        });
+      }
+    });
+    const shName=emp.nom.substring(0,31).replace(/[\\/\?\*\[\]:]/g,'_');
+    XLSX.utils.book_append_sheet(wb,ws,shName);
+  });
+  XLSX.writeFile(wb,`llegadas_michel_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('Excel Michel exportado','success');
+}
+
+function exportMichelPDF(){
+  const data=getMichelData();
+  if(!data.length){toast('Sin datos','error');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const byEmp={};
+  data.forEach(r=>{
+    if(!byEmp[r.empId]) byEmp[r.empId]={nom:r.empNom,sede:r.sedeNom,rows:[]};
+    byEmp[r.empId].rows.push(r);
+  });
+  const emps=Object.values(byEmp);
+  emps.forEach((emp,ei)=>{
+    if(ei>0) doc.addPage();
+    const W=doc.internal.pageSize.getWidth();
+    // Header
+    doc.setFillColor(26,58,42);
+    doc.rect(0,0,W,22,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('REPORTE DE HORAS DE LLEGADA',14,10);
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text(`Colaborador: ${emp.nom}`,14,18);
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.setTextColor(200,200,200);
+    doc.text(emp.sede, W-14, 18, {align:'right'});
+    // Table
+    const tableRows=emp.rows.map(r=>[fmtFecha(r.fecha),r.dia,r.entrada+(r.tardanza>0?` (+${m2hm(r.tardanza)})` : '')]);
+    doc.autoTable({
+      startY:27,
+      head:[['Fecha','Día de la Semana','Hora de Llegada']],
+      body:tableRows,
+      styles:{fontSize:10,cellPadding:3,textColor:[30,30,30]},
+      headStyles:{fillColor:[0,165,114],textColor:[255,255,255],fontStyle:'bold',halign:'center'},
+      alternateRowStyles:{fillColor:[244,251,247]},
+      didParseCell:(data)=>{
+        if(data.section==='body'){
+          const r=emp.rows[data.row.index];
+          if(r&&r.tardanza>0){
+            data.cell.styles.textColor=[192,57,43];
+            data.cell.styles.fillColor=[255,240,240];
+            data.cell.styles.fontStyle='bold';
+          }
+        }
+      },
+      margin:{left:14,right:14},
+    });
+    // Footer
+    const finalY=doc.lastAutoTable.finalY+8;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(26,58,42);
+    doc.text(`Total de días registrados: ${emp.rows.length}`, 14, finalY);
+    // Page footer
+    doc.setFontSize(7); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
+    doc.text(`Control HH.EE · ${new Date().toLocaleDateString('es-CO')}`, W/2, doc.internal.pageSize.getHeight()-6, {align:'center'});
+  });
+  doc.save(`llegadas_michel_${new Date().toISOString().slice(0,10)}.pdf`);
+  toast('PDF Michel generado','success');
+}
+
+// ══════════════════════════════════════════
+//  EXPORT HH.EE PDF
+// ══════════════════════════════════════════
+function exportExtrassPDF(){
+  const data=getXData();
+  if(!data.length){toast('Sin datos','error');return;}
+  const incT=document.getElementById('xc-t').checked;
+  const incD=document.getElementById('xc-d').checked;
+  const incTrab=document.getElementById('xc-trab').checked;
+  const formato=document.getElementById('xf-formato').value;
+
+  const {jsPDF}=window.jspdf;
+
+  if(formato==='por_empleado'){
+    const byEmp={};
+    data.forEach(r=>{
+      if(!byEmp[r.empId]) byEmp[r.empId]={nom:r.empNom,sede:r.sedeNom,rows:[]};
+      byEmp[r.empId].rows.push(r);
+    });
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const emps=Object.values(byEmp);
+    emps.forEach((emp,ei)=>{
+      if(ei>0) doc.addPage();
+      const W=doc.internal.pageSize.getWidth();
+      doc.setFillColor(26,58,42); doc.rect(0,0,W,22,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text('REPORTE DE HORAS EXTRAS',14,10);
+      doc.setFontSize(13); doc.setFont('helvetica','bold');
+      doc.text(`Colaborador: ${emp.nom}`,14,18);
+      doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.setTextColor(200,200,200);
+      doc.text(emp.sede, W-14, 18, {align:'right'});
+      const heads=['Fecha','Día','Entrada','Salida'];
+      if(incTrab) heads.push('H. Trabajadas');
+      if(incT) heads.push('Tardanza');
+      if(incD){heads.push('HE Diurnas');heads.push('HE Nocturnas');}
+      heads.push('Total HE');
+      emp.rows.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+      const rows=emp.rows.map(r=>{
+        const ss=r.sinSalida;
+        const row=[fmtFecha(r.fecha),r.diaCort,r.entrada,ss?'—':r.salida];
+        if(incTrab) row.push(ss?'—':m2hm(r.trabajadasNeto));
+        if(incT) row.push(r.tardanza>0?m2hm(r.tardanza):'00h 00m');
+        if(incD){row.push(m2hm(r.heDiur));row.push(m2hm(r.heNoct));}
+        row.push(ss?'—':m2hm(r.extrasMin));
+        return row;
+      });
+      doc.autoTable({
+        startY:27,head:[heads],body:rows,
+        styles:{fontSize:9,cellPadding:2.5,textColor:[30,30,30]},
+        headStyles:{fillColor:[0,165,114],textColor:[255,255,255],fontStyle:'bold',halign:'center'},
+        alternateRowStyles:{fillColor:[244,251,247]},
+        columnStyles:{0:{fontStyle:'bold'}},
+        margin:{left:14,right:14},
+      });
+      const totalExtras=emp.rows.filter(r=>!r.sinSalida).reduce((s,r)=>s+r.extrasMin,0);
+      const fy=doc.lastAutoTable.finalY+6;
+      doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(26,58,42);
+      doc.text(`Total días: ${emp.rows.length}   ·   Total HH.EE: ${m2hm(totalExtras)}`,14,fy);
+      doc.setFontSize(7);doc.setTextColor(150,150,150);doc.setFont('helvetica','normal');
+      doc.text(`Control HH.EE · ${new Date().toLocaleDateString('es-CO')}`,W/2,doc.internal.pageSize.getHeight()-6,{align:'center'});
+    });
+    doc.save(`horas_extras_por_empleado_${new Date().toISOString().slice(0,10)}.pdf`);
+  } else {
+    // Consolidado
+    const heads=['Empleado','Sede','Fecha','Día','Entrada','Salida','Total HE','Estado'];
+    const rows=data.map(r=>[r.empNom,r.sedeNom,fmtFecha(r.fecha),r.diaCort,r.entrada,r.sinSalida?'—':r.salida,r.sinSalida?'—':m2hm(r.extrasMin),r.estado]);
+    buildPDF('Reporte Consolidado de Horas Extras',`${new Date().toLocaleDateString('es-CO')} · ${data.length} registros`,heads,rows,`horas_extras_consolidado_${new Date().toISOString().slice(0,10)}.pdf`);
+  }
+  toast('PDF exportado','success');
+}
+
+// ══════════════════════════════════════════
+//  REPORTE DE HORAS DE LLEGADA (estilo Michel)
+// ══════════════════════════════════════════
+function exportReporteMichel(fmt){
+  if(!_llegFiltered.length){toast('Sin datos de llegadas','error');return;}
+  const byEmp={};
+  _llegFiltered.forEach(r=>{
+    if(!byEmp[r.empId]) byEmp[r.empId]={nom:r.empNom,sede:r.sedeNom,rows:[]};
+    byEmp[r.empId].rows.push(r);
+  });
+  const emps=Object.values(byEmp);
+
+  if(fmt==='xlsx'){
+    const wb=XLSX.utils.book_new();
+    emps.forEach(emp=>{
+      emp.rows.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+      const aoa=[];
+      aoa.push(['Reporte de Horas de Llegada']);
+      aoa.push(['Colaborador: '+emp.nom]);
+      aoa.push([]);
+      aoa.push(['Fecha','Dia de la Semana','Hora de Llegada']);
+      emp.rows.forEach(r=>aoa.push([fmtFecha(r.fecha),r.dia,r.entrada]));
+      aoa.push([]);
+      aoa.push(['Total de dias registrados: '+emp.rows.length]);
+      const ws=XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols']=[{wch:14},{wch:18},{wch:16}];
+      ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
+      const t=ws['A1'];if(t)t.s={font:{bold:true,sz:14,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A3A2A'}},alignment:{horizontal:'center',vertical:'center'}};
+      const c=ws['A2'];if(c)c.s={font:{bold:true,sz:12,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A3A2A'}},alignment:{horizontal:'center',vertical:'center'}};
+      ['A4','B4','C4'].forEach(addr=>{if(ws[addr])ws[addr].s={font:{bold:true,color:{rgb:'FFFFFF'},sz:11},fill:{fgColor:{rgb:'00A572'}},alignment:{horizontal:'center',vertical:'center'}};});
+      emp.rows.forEach((r,i)=>{
+        const late=r.tardanza>0;
+        const bg=late?'FFE5E5':(i%2===0?'F4FBF7':'FFFFFF');
+        const fc=late?'CC0000':'222222';
+        const bord={bottom:{style:'thin',color:{rgb:'DDDDDD'}},right:{style:'thin',color:{rgb:'EEEEEE'}}};
+        const rowIdx=4+i+1;
+        ['A','B','C'].forEach((col,ci)=>{
+          const a=col+rowIdx;
+          if(ws[a])ws[a].s={fill:{fgColor:{rgb:bg}},font:{color:{rgb:fc},bold:late},alignment:{horizontal:ci===0?'left':'center',vertical:'center'},border:bord};
+        });
+      });
+      const totAddr=XLSX.utils.encode_cell({r:4+emp.rows.length+1,c:0});
+      if(ws[totAddr])ws[totAddr].s={font:{bold:true,color:{rgb:'1A3A2A'},sz:11},fill:{fgColor:{rgb:'E8F5EF'}},alignment:{horizontal:'left'}};
+      const shName=emp.nom.substring(0,31).replace(/[\/\?\*\[\]:]/g,'_');
+      XLSX.utils.book_append_sheet(wb,ws,shName);
+    });
+    XLSX.writeFile(wb,'reporte_llegadas_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    toast('Excel generado: '+emps.length+' empleado(s)','success');
+
+  } else {
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const W=doc.internal.pageSize.getWidth();
+    emps.forEach((emp,ei)=>{
+      if(ei>0) doc.addPage();
+      emp.rows.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+      doc.setFillColor(26,58,42); doc.rect(0,0,W,22,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text('REPORTE DE HORAS DE LLEGADA',14,9);
+      doc.setFontSize(13); doc.setFont('helvetica','bold');
+      doc.text('Colaborador: '+emp.nom,14,18);
+      doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.setTextColor(180,220,200);
+      doc.text(emp.sede,W-14,18,{align:'right'});
+      doc.autoTable({
+        startY:27,
+        head:[['Fecha','Dia de la Semana','Hora de Llegada']],
+        body:emp.rows.map(r=>[fmtFecha(r.fecha),r.dia,r.entrada]),
+        styles:{fontSize:10,cellPadding:3,textColor:[30,30,30]},
+        headStyles:{fillColor:[0,165,114],textColor:[255,255,255],fontStyle:'bold',halign:'center'},
+        alternateRowStyles:{fillColor:[244,251,247]},
+        columnStyles:{0:{halign:'left',fontStyle:'bold'},1:{halign:'center'},2:{halign:'center'}},
+        margin:{left:14,right:14},
+        didParseCell:(data)=>{
+          if(data.section==='body'){
+            const r=emp.rows[data.row.index];
+            if(r&&r.tardanza>0){
+              data.cell.styles.fillColor=[255,229,229];
+              data.cell.styles.textColor=[180,0,0];
+              data.cell.styles.fontStyle='bold';
+            }
+          }
+        }
+      });
+      const fy=doc.lastAutoTable.finalY+7;
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(26,58,42);
+      doc.text('Total de dias registrados: '+emp.rows.length,14,fy);
+      doc.setFontSize(7); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
+      doc.text('Control HH.EE  |  '+new Date().toLocaleDateString('es-CO'),W/2,doc.internal.pageSize.getHeight()-6,{align:'center'});
+    });
+    doc.save('reporte_llegadas_'+new Date().toISOString().slice(0,10)+'.pdf');
+    toast('PDF generado: '+emps.length+' empleado(s)','success');
+  }
+}
+
 </script>
 </body>
 </html>
