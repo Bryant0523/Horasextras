@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rook</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" sizes="32x32" href="image/favicon-32x32.png">
+<link rel="manifest" href="image/site.webmanifest"> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="css/app.css">
+
+</head>
+<body>
+  <!-- TITLEBAR PERSONALIZADO -->
+<div class="titlebar">
+  <div class="titlebar-drag">
+    <img src="image/Logo.png" style="width:18px;height:18px;object-fit:contain;">
+    <span>Rook</span>
+  </div>
+  <div class="titlebar-btns">
+    <button onclick="window.electronAPI.minimize()">─</button>
+    <button onclick="window.electronAPI.maximize()">▢</button>
+    <button class="close-btn" onclick="window.electronAPI.close()">✕</button>
+  </div>
+</div>
+<div class="shell">
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="logo">
+  <img src="image/Logo.png" alt="Rook" style="width:56px;height:56px;object-fit:contain;">
+</div>
+  <nav class="nav">
+    <div class="nav-sec-label">Configuración</div>
+    <a class="nav-item active" data-sec="sedes"     onclick="go('sedes',this)">    <span class="ico">🏢</span>Sedes y Horarios</a>
+    <a class="nav-item"        data-sec="empleados" onclick="go('empleados',this)"><span class="ico">👥</span>Empleados</a>
+    <div class="nav-sec-label">Operación</div>
+    <a class="nav-item"        data-sec="dashboard" onclick="go('dashboard',this)"><span class="ico">📈</span>Dashboard</a>
+    <a class="nav-item"        data-sec="importar"  onclick="go('importar',this)"> <span class="ico">📁</span>Importar CSV</a>
+    <a class="nav-item"        data-sec="resultados"onclick="go('resultados',this)"><span class="ico">📊</span>Resultados</a>
+    <a class="nav-item"        data-sec="ausencias"  onclick="go('ausencias',this)"> <span class="ico">🚫</span>Ausencias</a>
+    <a class="nav-item"        data-sec="llegadas"   onclick="go('llegadas',this)">  <span class="ico">🕐</span>Reporte Llegadas</a>
+    <div class="nav-sec-label">Exportar</div>
+    <a class="nav-item"        data-sec="michel"    onclick="go('michel',this)">    <span class="ico">📋</span>Reporte Llegadas (Michel)</a>
+    <a class="nav-item"        data-sec="exportar"  onclick="go('exportar',this)">  <span class="ico">⬇️</span>Exportar Excel/PDF</a>
+    <div class="nav-sec-label" style="margin-top:auto;padding-top:16px;">Datos</div>
+    <a class="nav-item" onclick="confirmarLimpiarTodo()" style="color:var(--danger);border-left-color:transparent;">
+      <span class="ico">🗑</span>Limpiar todos los datos
+    </a>
+    <a class="nav-item" onclick="go('about', this)">
+      <span class="ico">ℹ️</span> Acerca de
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <span id="db-info">⏳ BD…</span>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">☀️ Claro</button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
+    <div class="page-title" id="pgTitle">Sedes y <span>Horarios</span></div>
+    <div class="sede-selector">
+      <label>Sede activa:</label>
+      <select id="sede-activa" onchange="onSedeActivaChange()">
+        <option value="">Todas las sedes</option>
+      </select>
+      <span class="status-pill pill-idle" id="spill">Sin datos</span>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- ═══ SEDES ═══ -->
+    <section class="section active" id="sec-sedes">
+      <div class="card">
+        <div class="card-title">Configurar sede</div>
+        <div class="form-grid" style="margin-bottom:18px;">
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Nombre de la sede</label>
+            <input id="s-nom" type="text" placeholder="Ej: Sede Centro">
+          </div>
+          <div class="form-group">
+            <label>Tolerancia llegada (minutos)</label>
+            <input id="s-tol" type="number" value="0" min="0" max="60">
+          </div>
+          <div class="form-group">
+            <label>Contabilizar entrada anticipada como HH.EE</label>
+            <select id="s-antici">
+              <option value="0">No (ignorar entradas antes del horario)</option>
+              <option value="1">Sí (contar minutos antes de la hora de entrada)</option>
+            </select>
+            <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:3px;">Actívalo para enfermeros, recepcionistas, etc. que entran antes por indicación del jefe</span>
+          </div>
+          <div class="form-group">
+            <label>Mínimo para contar horas extras (minutos)</label>
+            <input id="s-minext" type="number" value="15" min="0" max="60" title="Solo se cuentan extras si supera este umbral. Ej: 15 = se necesitan al menos 15 min extra para registrarlas.">
+            <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:3px;">Ej: 15 → solo se acumulan extras si el empleado salió ≥ 15 min después de su hora de salida</span>
+          </div>
+          <div class="form-group">
+            <label>Hora extras nocturnas desde</label>
+            <input id="s-noct" type="time" value="21:00">
+          </div>
+          <div class="form-group">
+            <label>Valor hora ordinaria (COP) — para recargos</label>
+            <input id="s-vhora" type="number" value="0" min="0" step="100" placeholder="Ej: 12500">
+            <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:3px;">Opcional. Se usa para calcular el valor en pesos de los recargos en el dashboard.</span>
+          </div>
+        </div>
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted2);margin-bottom:10px;letter-spacing:1px;">HORARIO POR DÍA — desactiva días no laborables</div>
+        <div class="horario-wrap">
+          <div class="h-row h-head">
+            <div class="hc">Día</div><div class="hc">Entrada</div><div class="hc">Salida</div><div class="hc">Almuerzo (min)</div><div class="hc">¿Laboral?</div>
+          </div>
+          <div class="h-row" id="dr-1"><div class="hc dname">Lunes</div>    <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
+          <div class="h-row" id="dr-2"><div class="hc dname">Martes</div>   <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
+          <div class="h-row" id="dr-3"><div class="hc dname">Miércoles</div><div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
+          <div class="h-row" id="dr-4"><div class="hc dname">Jueves</div>   <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
+          <div class="h-row" id="dr-5"><div class="hc dname" style="color:var(--accent3);">Viernes</div><div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="16:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
+          <div class="h-row" id="dr-6"><div class="hc dname" style="color:var(--warn);">Sábado</div>   <div class="hc"><input type="time" class="de" value="09:00"></div><div class="hc"><input type="time" class="ds" value="14:00"></div><div class="hc"><input type="number" class="da" value="0"  min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc"></div></div>
+          <div class="h-row" id="dr-0"><div class="hc dname" style="color:var(--muted);">Domingo</div>  <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc"></div></div>
+        </div>
+        <p class="help-text">💡 Viernes precargado 8–16h. Sábado 9–14h sin almuerzo. Cada sede puede tener su propio horario.</p>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="guardarSede()">💾 Guardar sede</button>
+          <button class="btn btn-secondary" onclick="loadDemoSedes()">Cargar ejemplo</button>
+          <button class="btn btn-secondary btn-sm" id="btn-cancel-edit" style="display:none;" onclick="resetSedeForm()">✕ Cancelar</button>
+        </div>
+        <input type="hidden" id="s-eid">
+      </div>
+      <div class="card">
+        <div class="card-title">Sedes guardadas <span id="sc" class="tag">0</span></div>
+        <div id="sedes-list"><div class="empty-state"><div class="eico">🏢</div><p>Agrega tu primera sede.</p></div></div>
+      </div>
+    </section>
+
+    <!-- ═══ EMPLEADOS ═══ -->
+    <section class="section" id="sec-empleados">
+      <div class="card">
+        <div class="card-title">Registrar empleado</div>
+        <div class="form-grid">
+          <div class="form-group"><label>ID del CSV (Card No.)</label><input id="e-id" type="text" placeholder="00123"></div>
+          <div class="form-group"><label>Nombre completo</label><input id="e-nom" type="text" placeholder="Juan Pérez"></div>
+          <div class="form-group"><label>Sede asignada</label><select id="e-sede"><option value="">— selecciona —</option></select></div>
+          <div class="form-group"><label>Cargo (opcional)</label><input id="e-cargo" type="text" placeholder="Vendedor"></div>
+        </div>
+
+        <!-- HORARIOS PERSONALIZADOS A / B -->
+        <div style="margin-top:16px;">
+          <div class="emp-sched-toggle" onclick="toggleEmpSched()">
+            <span id="emp-sched-arrow">▶</span> Horarios personalizados (opcional — si difieren del de la sede)
+          </div>
+          <div class="emp-sched-box" id="emp-sched-box">
+            <p class="help-text" style="margin:10px 12px 0;">Define uno o dos horarios rotativos. El sistema usará el horario vigente según la fecha del CSV. Si solo usas Horario A, deja el B sin activar.</p>
+
+            <!-- TAB selector -->
+            <div style="display:flex;gap:0;margin:12px 0 0;border-bottom:1px solid var(--border);">
+              <button id="tab-ha" onclick="switchSchedTab('A')" style="padding:7px 18px;font-size:12px;font-family:'DM Mono',monospace;font-weight:700;background:var(--accent);color:#000;border:none;border-radius:8px 8px 0 0;cursor:pointer;">Horario A</button>
+              <button id="tab-hb" onclick="switchSchedTab('B')" style="padding:7px 18px;font-size:12px;font-family:'DM Mono',monospace;font-weight:700;background:transparent;color:var(--muted2);border:none;border-radius:8px 8px 0 0;cursor:pointer;border-bottom:2px solid transparent;">Horario B</button>
+            </div>
+
+            <!-- HORARIO A -->
+            <div id="sched-panel-A" style="padding:12px 0 4px;">
+              <div style="display:flex;align-items:center;gap:16px;padding:0 4px 10px;flex-wrap:wrap;">
+                <div class="form-group" style="flex:1;min-width:160px;">
+                  <label>Vigente desde (Horario A)</label>
+                  <input type="date" id="e-ha-desde" style="background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;width:100%;">
+                  <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">Vacío = desde siempre</span>
+                </div>
+              </div>
+              <div class="h-row-sm h-head-sm">
+                <div class="hc">Día</div><div class="hc">Entrada</div><div class="hc">Salida</div><div class="hc">Almuerzo</div><div class="hc">Lab.</div>
+              </div>
+              <div class="h-row-sm" id="edr-1"><div class="hc dname" style="font-size:12px;">Lunes</div>    <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
+              <div class="h-row-sm" id="edr-2"><div class="hc dname" style="font-size:12px;">Martes</div>   <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
+              <div class="h-row-sm" id="edr-3"><div class="hc dname" style="font-size:12px;">Miércoles</div><div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
+              <div class="h-row-sm" id="edr-4"><div class="hc dname" style="font-size:12px;">Jueves</div>   <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
+              <div class="h-row-sm" id="edr-5"><div class="hc dname" style="font-size:12px;">Viernes</div>  <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="16:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
+              <div class="h-row-sm" id="edr-6"><div class="hc dname" style="font-size:12px;">Sábado</div>   <div class="hc"><input type="time" class="ede" value="09:00"></div><div class="hc"><input type="time" class="eds" value="14:00"></div><div class="hc"><input type="number" class="eda" value="0"  min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc"></div></div>
+              <div class="h-row-sm" id="edr-0"><div class="hc dname" style="font-size:12px;">Domingo</div>  <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc"></div></div>
+            </div>
+
+            <!-- HORARIO B -->
+            <div id="sched-panel-B" style="display:none;padding:12px 0 4px;">
+              <div style="display:flex;align-items:center;gap:16px;padding:0 4px 10px;flex-wrap:wrap;">
+                <div class="form-group" style="flex:1;min-width:160px;">
+                  <label>Vigente desde (Horario B)</label>
+                  <input type="date" id="e-hb-desde" style="background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;width:100%;">
+                  <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">Vacío = no se usa</span>
+                </div>
+                <div class="form-group" style="flex:1;min-width:160px;">
+                  <label>Vigente hasta (Horario B)</label>
+                  <input type="date" id="e-hb-hasta" style="background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;width:100%;">
+                  <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">Vacío = aplica indefinidamente</span>
+                </div>
+              </div>
+              <div class="h-row-sm h-head-sm">
+                <div class="hc">Día</div><div class="hc">Entrada</div><div class="hc">Salida</div><div class="hc">Almuerzo</div><div class="hc">Lab.</div>
+              </div>
+              <div class="h-row-sm" id="edrb-1"><div class="hc dname" style="font-size:12px;">Lunes</div>    <div class="hc"><input type="time" class="edeb" value="10:00"></div><div class="hc"><input type="time" class="edsb" value="16:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb" checked></div></div>
+              <div class="h-row-sm" id="edrb-2"><div class="hc dname" style="font-size:12px;">Martes</div>   <div class="hc"><input type="time" class="edeb" value="10:00"></div><div class="hc"><input type="time" class="edsb" value="16:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb" checked></div></div>
+              <div class="h-row-sm" id="edrb-3"><div class="hc dname" style="font-size:12px;">Miércoles</div><div class="hc"><input type="time" class="edeb" value="10:00"></div><div class="hc"><input type="time" class="edsb" value="16:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb" checked></div></div>
+              <div class="h-row-sm" id="edrb-4"><div class="hc dname" style="font-size:12px;">Jueves</div>   <div class="hc"><input type="time" class="edeb" value="10:00"></div><div class="hc"><input type="time" class="edsb" value="16:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb" checked></div></div>
+              <div class="h-row-sm" id="edrb-5"><div class="hc dname" style="font-size:12px;">Viernes</div>  <div class="hc"><input type="time" class="edeb" value="10:00"></div><div class="hc"><input type="time" class="edsb" value="14:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb" checked></div></div>
+              <div class="h-row-sm" id="edrb-6"><div class="hc dname" style="font-size:12px;">Sábado</div>   <div class="hc"><input type="time" class="edeb" value="09:00"></div><div class="hc"><input type="time" class="edsb" value="13:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb"></div></div>
+              <div class="h-row-sm" id="edrb-0"><div class="hc dname" style="font-size:12px;">Domingo</div>  <div class="hc"><input type="time" class="edeb" value="08:00"></div><div class="hc"><input type="time" class="edsb" value="17:00"></div><div class="hc"><input type="number" class="edab" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb"></div></div>
+            </div>
+
+            <p class="help-text" style="padding:0 4px 10px;">💡 Ej. doctora: Horario A = 8–14h (sin "desde"). Horario B = 10–16h, desde la fecha en que empiece esa rotación.</p>
+          </div>
+          <p class="help-text">Si dejas el horario personalizado cerrado (▶), el empleado usará el horario de su sede.</p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="guardarEmp()">＋ Agregar empleado</button>
+          <button class="btn btn-secondary" onclick="importarEmpCSV()">📥 Importar IDs del CSV</button>
+          <button class="btn btn-secondary btn-sm" id="btn-cancel-emp" style="display:none;" onclick="resetEmpForm()">✕ Cancelar edición</button>
+        </div>
+        <input type="hidden" id="e-eid">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Días de descanso compensatorio (fechas separadas por coma)</label>
+        <input id="e-descansos" type="text" placeholder="Ej: 2026-01-10, 2026-01-17, 2026-01-24">
+        <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:3px;">
+          Días que el empleado descansa en lugar de trabajar el sábado u otro día — no se cuentan como ausencia
+        </span>
+      </div>
+      <div class="card">
+        <div class="card-title">Empleados <span id="ec" class="tag">0</span></div>
+        <div class="filter-bar">
+          <input id="ef-q" type="text" placeholder="Buscar…" oninput="renderEmps()" style="flex:1;min-width:150px;">
+          <select id="ef-sede" onchange="renderEmps()"><option value="">Todas las sedes</option></select>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>ID</th><th>Nombre</th><th>Sede</th><th>Cargo</th><th>Horario</th><th></th></tr></thead>
+          <tbody id="etb"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <section class="section" id="sec-dashboard">
+      <div id="dash-alerts-area"></div>
+      <div id="dash-stats-area"></div>
+      <div class="card">
+        <div class="card-title">📊 Horas extras por empleado — mes</div>
+        <div class="filter-bar" style="margin-bottom:14px;">
+          <select id="df-sede" onchange="renderDash()"><option value="">Todas las sedes</option></select>
+          <select id="df-mes"  onchange="renderDash()"><option value="">Todos los meses</option></select>
+        </div>
+        <canvas id="dash-chart" style="width:100%;max-height:320px;"></canvas>
+        <div id="dash-chart-empty" class="empty-state" style="display:none;"><div class="eico">📈</div><p>Procesa un CSV para ver la gráfica.</p></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;" class="dash-two-col">
+        <div class="card">
+          <div class="card-title">🏆 Ranking HH.EE acumuladas</div>
+          <div id="dash-ranking"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📅 Calendario del mes</div>
+          <div class="filter-bar" style="margin-bottom:10px;">
+            <select id="df-cal-emp" onchange="renderCalendar()" style="flex:1;min-width:140px;"><option value="">— Empleado —</option></select>
+          </div>
+          <div id="dash-calendar"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">💰 Recargos por tipo (legislación colombiana)</div>
+        <div id="dash-recargos"></div>
+        <p class="help-text" style="margin-top:10px;">Basado en el SMMLV y porcentajes del Código Sustantivo del Trabajo: HE diurna +25%, HE nocturna +75%, HE dominical/festiva diurna +100%, HE dominical/festiva nocturna +150%.</p>
+      </div>
+    </section>
+
+    <!-- ═══ IMPORTAR ═══ -->
+    <section class="section" id="sec-importar">
+      <div class="card">
+        <div class="card-title">Formato iVMS-4200</div>
+        <div style="background:var(--bg);border-radius:8px;padding:13px 15px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);line-height:2.2;border:1px solid var(--border);">
+          <span style="color:var(--accent);">No.</span>, <span style="color:var(--accent3);">Card No.</span>, <span style="color:var(--accent);">Name</span>, <span style="color:var(--accent3);">Department</span>, <span style="color:var(--accent);">Time</span><br>
+          <span style="color:var(--muted);">1, 00001, Juan Perez, Ventas, 2024/01/15 08:03:00</span>
+        </div>
+        <p class="help-text">Separador y columnas se detectan automáticamente.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Cargar archivo</div>
+        <div class="upload-zone" id="dz">
+          <input type="file" id="csvf" accept=".csv,.txt" onchange="handleFile(event)">
+          <div class="upload-icon">📂</div>
+          <h3>Arrastra el CSV aquí o haz clic</h3>
+          <p>iVMS-4200 · .csv o .txt · separador auto-detectado</p>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary btn-sm" onclick="loadDemo()">🧪 Datos de prueba</button>
+        </div>
+      </div>
+      <div class="card" id="prev-card" style="display:none;">
+        <div class="card-title">Vista previa</div>
+        <div id="csv-stats"></div>
+        <div class="table-wrap" id="csv-prev"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="procesar()">⚡ Calcular horas extras</button>
+          <button class="btn btn-secondary" onclick="clearCSV()">✕ Limpiar</button>
+        </div>
+        <div class="progress-bar" id="pbar" style="display:none;"><div class="progress-fill" id="pfill" style="width:0%"></div></div>
+      </div>
+    </section>
+
+    <!-- ═══ RESULTADOS ═══ -->
+    <section class="section" id="sec-resultados">
+      <div id="stats-area"></div>
+      <div class="card">
+        <div class="card-title">Detalle diario por empleado</div>
+        <div class="filter-bar">
+          <input id="rf-q" type="text" placeholder="Buscar empleado…" oninput="renderRes()" style="flex:1;min-width:150px;">
+          <select id="rf-sede" onchange="renderRes()"><option value="">Todas las sedes</option></select>
+          <select id="rf-mes" onchange="renderRes()"><option value="">Todos los meses</option></select>
+          <div class="date-range">
+            <input type="date" id="rf-desde" onchange="renderRes()" title="Desde">
+            <span>–</span>
+            <input type="date" id="rf-hasta" onchange="renderRes()" title="Hasta">
+          </div>
+          <select id="rf-tipo" onchange="renderRes()">
+            <option value="">Todos</option>
+            <option value="extras">Con HH.EE</option>
+            <option value="tardanza">Con tardanza</option>
+            <option value="incompleto">Sin salida</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr>
+            <th>Empleado</th><th>Sede</th><th>Fecha</th><th>Día</th>
+            <th>Entrada</th><th>Salida</th><th>Horas trabajadas</th>
+            <th>Tardanza</th><th>Almuerzo</th>
+            <th>HE Diurnas</th><th>HE Nocturnas</th>
+            <th>Total HE</th><th>Estado</th><th>Nota</th>
+          </tr></thead>
+          <tbody id="rtb"><tr><td colspan="14"><div class="empty-state"><div class="eico">📊</div><p>Importa y procesa un CSV primero.</p></div></td></tr></tbody>
+        </table></div>
+        <div id="res-pagination" class="pagination"></div>
+      </div>
+    </section>
+
+    <!-- ═══ REPORTE MICHEL ═══ -->
+    <section class="section" id="sec-michel">
+      <div class="card">
+        <div class="card-title">📋 Reporte de Horas de Llegada</div>
+        <p class="help-text" style="margin-bottom:14px;">Una tabla por empleado con Fecha, Día y Hora de Llegada. Las filas en rojo indican llegada tarde. Total de días al pie de cada tabla.</p>
+        <div class="filter-bar">
+          <select id="mf-sede" onchange="renderMichel()"><option value="">Todas las sedes</option></select>
+          <select id="mf-mes"  onchange="renderMichel()"><option value="">Todos los meses</option></select>
+          <div class="date-range">
+            <input type="date" id="mf-desde" onchange="renderMichel()" title="Desde">
+            <span>–</span>
+            <input type="date" id="mf-hasta" onchange="renderMichel()" title="Hasta">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="exportMichelXLSX()">📥 Excel</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportMichelPDF()">📄 PDF</button>
+        </div>
+        <div id="michel-area"><div class="empty-state"><div class="eico">📋</div><p>Procesa un CSV primero.</p></div></div>
+      </div>
+    </section>
+
+    <!-- ═══ EXPORTAR ═══ -->
+    <section class="section" id="sec-exportar">
+      <div class="card">
+        <div class="card-title">Opciones de exportación</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Sede</label><select id="xf-sede"><option value="">Todas</option></select></div>
+          <div class="form-group"><label>Mes</label><select id="xf-mes"><option value="">Todos</option></select></div>
+          <div class="form-group"><label>Columnas extra</label>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:4px;">
+              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-t" checked> Tardanza</label>
+              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-g" checked> Almuerzo/Gabela</label>
+              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-d" checked> HE Diurnas / Nocturnas separadas</label>
+              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-trab" checked> Horas trabajadas</label>
+            </div>
+          </div>
+          <div class="form-group"><label>Formato de reporte</label>
+            <select id="xf-formato">
+              <option value="por_empleado">Un archivo por empleado (como imagen)</option>
+              <option value="consolidado">Un archivo consolidado (todas las sedes)</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="exportXLSX()">📥 Exportar .xlsx</button>
+          <button class="btn btn-secondary" onclick="exportExtrassPDF()">📄 Exportar PDF</button>
+          <button class="btn btn-secondary" onclick="exportCSV()">📄 Exportar .csv</button>
+        </div>
+        <p class="help-text" style="margin-top:12px;">
+          <strong style="color:var(--text);">Un archivo por empleado:</strong> genera un .xlsx con una hoja por cada colaborador, con el mismo formato de la imagen (encabezado con nombre, tabla de días y totales al pie).<br>
+          <strong style="color:var(--text);">Consolidado:</strong> todo en un archivo con 3 hojas: detalle diario, resumen por empleado, resumen por sede.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">Resumen consolidado por empleado</div>
+        <div id="consol-area"><div class="empty-state"><div class="eico">📋</div><p>Procesa datos primero.</p></div></div>
+      </div>
+    </section>
+
+    <!-- ═══ LLEGADAS ═══ -->
+    <section class="section" id="sec-llegadas">
+      <div id="llegadas-stats-area"></div>
+      <div class="card">
+        <div class="card-title">🕐 Reporte de llegadas y puntualidad</div>
+        <div class="filter-bar">
+          <input id="lf-q" type="text" placeholder="Buscar empleado…" oninput="renderLlegadas()" style="flex:1;min-width:150px;">
+          <select id="lf-sede" onchange="renderLlegadas()"><option value="">Todas las sedes</option></select>
+          <select id="lf-mes"  onchange="renderLlegadas()"><option value="">Todos los meses</option></select>
+          <div class="date-range">
+            <input type="date" id="lf-desde" onchange="renderLlegadas()" title="Desde">
+            <span>–</span>
+            <input type="date" id="lf-hasta" onchange="renderLlegadas()" title="Hasta">
+          </div>
+          <select id="lf-tipo" onchange="renderLlegadas()">
+            <option value="">Todos</option>
+            <option value="puntual">Puntual</option>
+            <option value="tarde">Tarde</option>
+            <option value="sin_salida">Sin salida</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="exportLlegadasXLSX()">📥 Excel</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportLlegadasPDF()">📄 PDF</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportReporteMichel('xlsx')">👤 Reporte llegadas</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr>
+            <th>Empleado</th><th>Sede</th><th>Fecha</th><th>Día</th>
+            <th>Hora entrada</th><th>Esperada</th><th>Diferencia</th>
+            <th>Hora salida</th><th>Sal. esperada</th><th>Dif. salida</th>
+            <th>Horario usado</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="llegadas-tb"><tr><td colspan="12"><div class="empty-state"><div class="eico">🕐</div><p>Procesa un CSV primero.</p></div></td></tr></tbody>
+        </table></div>
+        <div id="llegadas-pagination" class="pagination"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 Resumen de puntualidad por empleado</div>
+        <div id="llegadas-resumen"></div>
+      </div>
+    </section>
+
+    <!-- ═══ AUSENCIAS ═══ -->
+    <section class="section" id="sec-ausencias">
+      <div id="aus-stats-area"></div>
+      <div class="card">
+        <div class="card-title">🚫 Días laborables sin registro</div>
+        <p class="help-text" style="margin-bottom:14px;">Se muestran todos los días laborables (según el horario de cada empleado) para los que <strong>no existe ningún registro</strong> en el CSV importado. Esto puede indicar ausencia, olvido de fichar, o día no trabajado.</p>
+        <div class="filter-bar">
+          <input id="af-q" type="text" placeholder="Buscar empleado…" oninput="renderAusencias()" style="flex:1;min-width:150px;">
+          <select id="af-sede" onchange="renderAusencias()"><option value="">Todas las sedes</option></select>
+          <select id="af-mes"  onchange="renderAusencias()"><option value="">Todos los meses</option></select>
+          <div class="date-range">
+            <input type="date" id="af-desde" onchange="renderAusencias()" title="Desde">
+            <span>–</span>
+            <input type="date" id="af-hasta" onchange="renderAusencias()" title="Hasta">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="exportAusenciasXLSX()">📥 Excel</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportAusenciasPDF()">📄 PDF</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr>
+            <th>Empleado</th><th>Sede</th><th>Fecha</th><th>Día</th>
+            <th>Horario esperado</th><th>Horas contrato</th><th>Justificación</th>
+          </tr></thead>
+          <tbody id="aus-tb"><tr><td colspan="7"><div class="empty-state"><div class="eico">🚫</div><p>Procesa un CSV primero.</p></div></td></tr></tbody>
+        </table></div>
+        <div id="aus-pagination" class="pagination"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 Resumen de ausencias por empleado</div>
+        <div id="aus-resumen"></div>
+      </div>
+    </section>
+    <div class="section" id="sec-about">
+      <div class="content">
+        <div class="card" style="max-width:480px;margin:0 auto;text-align:center;padding:40px;">
+          <img src="image/Logo.png" style="width:72px;height:72px;object-fit:contain;margin-bottom:20px;">
+          <h2 style="font-size:22px;font-weight:800;margin-bottom:6px;">Rook</h2>
+          <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text);margin-bottom:24px;">
+            Control de Horas Extras · v1.0.0
+          </p>
+          <div
+            style="border-top:1px solid var(--text);padding-top:20px;font-size:12px;color:var(--muted2);font-family:'DM Mono',monospace;line-height:2;">
+            <div>Desarrollado con amor por <strong style="color:var(--text);">ROOK</strong></div>
+            <div>Electron + IndexedDB</div>
+            <div style="margin-top:12px;font-size:11px;color:var(--text);">© 2025 Todos los derechos reservados</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- MODAL IMPORTAR EMPLEADOS -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal-box">
+    <div class="modal-title">Importar empleados del CSV</div>
+    <div class="modal-sub" id="modal-import-sub">Se detectaron <strong id="modal-import-count">0</strong> empleados nuevos en el archivo.</div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>Asignar todos a la sede</label>
+      <select id="modal-import-sede" style="background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;outline:none;">
+        <option value="">— selecciona —</option>
+      </select>
+    </div>
+    <div id="modal-import-preview" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted2);background:var(--bg);"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-import')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarImport()">✓ Importar</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<!-- POPUP NOTA -->
+<div class="nota-popup" id="nota-popup" style="display:none;">
+  <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted2);margin-bottom:8px;" id="nota-popup-label">Nota</div>
+  <textarea id="nota-popup-text" placeholder="Ej: permiso médico, comisión, día libre pactado…" maxlength="200"></textarea>
+  <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end;">
+    <button class="btn btn-secondary btn-sm" onclick="closeNotaPopup()">Cancelar</button>
+    <button class="btn btn-primary btn-sm" onclick="saveNota()">Guardar</button>
+  </div>
+</div>
+
+<!-- MODAL LIMPIAR TODO -->
+<div class="modal-overlay" id="modal-clear">
+  <div class="modal-box">
+    <div class="modal-title">🗑 Limpiar todos los datos</div>
+    <div class="modal-sub">Se eliminarán <strong>todos los resultados calculados</strong>. Las sedes y empleados configurados se conservarán. Esta acción no se puede deshacer.</div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-clear')">Cancelar</button>
+      <button class="btn" style="background:var(--danger);color:#fff;" onclick="limpiarTodo()">🗑 Sí, limpiar resultados</button>
+    </div>
+  </div>
+</div>
+<script src="js/app.js"></script>
+
+</body>
+</html>

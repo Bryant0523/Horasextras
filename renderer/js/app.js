@@ -1,790 +1,3 @@
-<!DOCTYPE html>
-<html lang="es" data-theme="dark">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Control de Horas Extras — Hikvision</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-/* ── TOKENS ── */
-[data-theme="dark"]{
-  --bg:#0e0f11;--surface:#16181c;--card:#1c1f25;--border:#2a2d35;--border2:#363a45;
-  --text:#f0f1f3;--muted:#6b7280;--muted2:#9ca3af;--input-bg:#0e0f11;
-  --accent:#00e5a0;--accent3:#7b8cff;--danger:#ff4f4f;--warn:#f59e0b;--success:#10b981;
-  --shadow:rgba(0,0,0,.35);
-}
-[data-theme="light"]{
-  --bg:#f4f5f7;--surface:#ffffff;--card:#ffffff;--border:#dde1e7;--border2:#c8cdd6;
-  --text:#1a1d23;--muted:#8a929e;--muted2:#6b7280;--input-bg:#f4f5f7;
-  --accent:#00a572;--accent3:#4f5fc4;--danger:#dc2626;--warn:#d97706;--success:#059669;
-  --shadow:rgba(0,0,0,.08);
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;transition:background .2s,color .2s;}
-.shell{display:flex;min-height:100vh;}
-
-/* SIDEBAR */
-.sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;transition:background .2s;}
-.main{flex:1;overflow-x:hidden;}
-.logo{padding:22px 20px 18px;border-bottom:1px solid var(--border);}
-.logo-mark{font-size:10px;font-family:'DM Mono',monospace;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;}
-.logo h1{font-size:16px;font-weight:800;line-height:1.25;color:var(--text);}
-.nav{padding:10px 0;flex:1;}
-.nav-sec-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:2px;padding:12px 20px 5px;text-transform:uppercase;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;font-weight:600;color:var(--muted2);cursor:pointer;transition:all .15s;border-left:2px solid transparent;text-decoration:none;}
-.nav-item:hover{color:var(--text);background:rgba(128,128,128,.07);}
-.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(0,165,114,.08);}
-.nav-item .ico{width:16px;text-align:center;font-size:14px;}
-.sidebar-footer{padding:14px 20px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:space-between;}
-
-/* THEME TOGGLE */
-.theme-btn{background:var(--card);border:1px solid var(--border2);color:var(--muted2);padding:4px 9px;border-radius:20px;cursor:pointer;font-size:11px;font-family:'DM Mono',monospace;transition:all .15s;}
-.theme-btn:hover{border-color:var(--accent);color:var(--accent);}
-
-/* TOPBAR */
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;transition:background .2s;}
-.page-title{font-size:20px;font-weight:800;color:var(--text);}
-.page-title span{color:var(--accent);}
-.status-pill{font-size:11px;font-family:'DM Mono',monospace;padding:4px 12px;border-radius:20px;font-weight:500;}
-.pill-ok{background:rgba(16,185,129,.12);color:var(--success);border:1px solid rgba(16,185,129,.25);}
-.pill-warn{background:rgba(245,158,11,.12);color:var(--warn);border:1px solid rgba(245,158,11,.25);}
-.pill-idle{background:rgba(107,114,128,.12);color:var(--muted2);border:1px solid var(--border);}
-
-.content{padding:28px;}
-.section{display:none;}
-.section.active{display:block;}
-
-/* CARDS */
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px;transition:background .2s,border .2s;}
-.card-title{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.card-title::after{content:'';flex:1;height:1px;background:var(--border);}
-
-/* HORARIO GRID */
-.horario-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-.h-row{display:grid;grid-template-columns:120px 110px 110px 100px 56px;align-items:center;border-bottom:1px solid var(--border);transition:background .1s;}
-.h-row:last-child{border-bottom:none;}
-.h-row:hover:not(.h-head){background:rgba(128,128,128,.04);}
-.h-head{background:var(--bg);}
-.hc{padding:9px 12px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text);}
-.h-head .hc{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;padding:10px 12px;}
-.hc.dname{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding-left:16px;}
-.hc input[type=time],.hc input[type=number]{background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:6px 8px;border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;outline:none;width:100%;transition:border .15s;}
-.hc input[type=time]:focus,.hc input[type=number]:focus{border-color:var(--accent);}
-.hc input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:pointer;}
-
-/* FORMS */
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.form-group{display:flex;flex-direction:column;gap:5px;}
-.form-group label{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted2);}
-.form-group input,.form-group select{background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;outline:none;transition:border .15s,background .2s;}
-.form-group input:focus,.form-group select:focus{border-color:var(--accent);}
-.form-group select option{background:var(--card);}
-
-/* BUTTONS */
-.btn{padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:7px;}
-.btn-primary{background:var(--accent);color:#000;}
-.btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);}
-.btn-secondary{background:transparent;border:1px solid var(--border2);color:var(--muted2);}
-.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
-.btn-sm{padding:5px 12px;font-size:12px;}
-.btn-row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
-
-/* UPLOAD */
-.upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
-.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(0,165,114,.04);}
-.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
-.upload-icon{font-size:34px;margin-bottom:10px;}
-.upload-zone h3{font-size:14px;font-weight:700;margin-bottom:5px;color:var(--text);}
-.upload-zone p{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;}
-
-/* TABLES */
-.table-wrap{overflow-x:auto;margin-top:10px;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-thead th{text-align:left;padding:9px 13px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
-tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
-tbody tr:hover{background:rgba(128,128,128,.04);}
-tbody td{padding:10px 13px;vertical-align:middle;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);}
-tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
-
-/* BADGES */
-.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-family:'DM Mono',monospace;font-weight:500;}
-.badge-green{background:rgba(16,185,129,.12);color:var(--success);}
-.badge-red{background:rgba(220,38,38,.12);color:var(--danger);}
-.badge-amber{background:rgba(217,119,6,.12);color:var(--warn);}
-.badge-blue{background:rgba(79,95,196,.12);color:var(--accent3);}
-.badge-gray{background:rgba(107,114,128,.12);color:var(--muted2);}
-
-/* STATS */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:22px;}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden;transition:background .2s;}
-.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--accent));}
-.stat-card.red{--ac:var(--danger);}
-.stat-card.amber{--ac:var(--warn);}
-.stat-card.blue{--ac:var(--accent3);}
-.stat-card.purple{--ac:#a855f7;}
-.stat-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px;}
-.stat-val{font-size:26px;font-weight:800;line-height:1;color:var(--text);}
-.stat-sub{font-size:11px;color:var(--muted2);font-family:'DM Mono',monospace;margin-top:3px;}
-
-/* RESULT COLORS */
-.rx{color:var(--accent);font-weight:600;}
-.rt{color:var(--danger);font-weight:500;}
-.rg{color:var(--warn);}
-.rn{color:var(--muted2);}
-
-/* PROGRESS */
-.progress-bar{background:var(--border);border-radius:4px;height:4px;margin-top:18px;overflow:hidden;}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));transition:width .4s;border-radius:4px;}
-
-/* FILTERS */
-.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:center;}
-.filter-bar input,.filter-bar select{background:var(--card);border:1px solid var(--border2);color:var(--text);padding:7px 11px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;transition:border .15s;}
-.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent);}
-
-/* TOAST */
-#toast{position:fixed;bottom:22px;right:22px;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 18px;font-size:13px;font-family:'DM Mono',monospace;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none;z-index:999;max-width:300px;color:var(--text);}
-#toast.show{opacity:1;transform:translateY(0);}
-#toast.success{border-color:var(--success);color:var(--success);}
-#toast.error{border-color:var(--danger);color:var(--danger);}
-#toast.info{border-color:var(--accent3);color:var(--accent3);}
-
-/* MISC */
-.help-text{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:8px;line-height:1.6;}
-.empty-state{text-align:center;padding:50px 20px;color:var(--muted);}
-.empty-state .eico{font-size:38px;margin-bottom:10px;}
-.empty-state p{font-family:'DM Mono',monospace;font-size:13px;}
-.icon-btn{background:transparent;border:1px solid var(--border);color:var(--muted2);padding:4px 9px;border-radius:6px;cursor:pointer;font-size:12px;transition:all .15s;}
-.icon-btn:hover{border-color:var(--accent);color:var(--accent);}
-.icon-btn.del:hover{border-color:var(--danger);color:var(--danger);}
-.tag{display:inline-block;background:rgba(0,165,114,.1);color:var(--accent);border-radius:4px;font-size:10px;font-family:'DM Mono',monospace;padding:2px 6px;margin-left:5px;}
-.sede-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:12px;transition:background .2s;}
-.sede-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
-.sede-card-name{font-size:15px;font-weight:700;color:var(--text);}
-.day-pill{font-size:10px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:4px;background:rgba(128,128,128,.1);color:var(--muted2);display:inline-block;margin:2px;}
-.day-pill.on{background:rgba(0,165,114,.1);color:var(--accent);}
-
-/* HORARIO EMPLEADO — colapsable */
-.emp-sched-toggle{font-size:11px;font-family:'DM Mono',monospace;color:var(--accent3);cursor:pointer;padding:4px 0;display:inline-flex;align-items:center;gap:5px;margin-top:8px;}
-.emp-sched-toggle:hover{text-decoration:underline;}
-.emp-sched-box{display:none;margin-top:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
-.emp-sched-box.open{display:block;}
-.h-row-sm{display:grid;grid-template-columns:100px 95px 95px 80px 50px;align-items:center;border-bottom:1px solid var(--border);}
-.h-row-sm:last-child{border-bottom:none;}
-.h-row-sm .hc{padding:7px 10px;font-size:11px;}
-.h-row-sm.h-head-sm{background:var(--bg);}
-.h-row-sm.h-head-sm .hc{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-
-
-/* MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
-.modal-overlay.open{opacity:1;pointer-events:all;}
-.modal-box{background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:28px;width:100%;max-width:460px;transform:translateY(12px);transition:transform .2s;}
-.modal-overlay.open .modal-box{transform:translateY(0);}
-.modal-title{font-size:16px;font-weight:800;margin-bottom:6px;color:var(--text);}
-.modal-sub{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:20px;}
-.modal-footer{display:flex;gap:10px;margin-top:22px;justify-content:flex-end;}
-
-/* SEDE SELECTOR TOPBAR */
-.sede-selector{display:flex;align-items:center;gap:10px;}
-.sede-selector label{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted2);white-space:nowrap;}
-.sede-selector select{background:var(--card);border:1px solid var(--border2);color:var(--text);padding:6px 12px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;cursor:pointer;min-width:160px;}
-.sede-selector select:focus{border-color:var(--accent);}
-.sede-badge{background:rgba(0,165,114,.12);color:var(--accent);border:1px solid rgba(0,165,114,.25);padding:4px 12px;border-radius:20px;font-size:11px;font-family:'DM Mono',monospace;font-weight:600;white-space:nowrap;}
-/* NOTAS inline */
-.nota-btn{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:5px;padding:2px 7px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap;}
-.nota-btn:hover{border-color:var(--accent3);color:var(--accent3);}
-.nota-btn.has-nota{border-color:var(--accent3);color:var(--accent3);background:rgba(123,140,255,.08);}
-.nota-popup{position:fixed;z-index:300;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:14px;width:280px;box-shadow:0 8px 32px var(--shadow);}
-.nota-popup textarea{width:100%;background:var(--input-bg);border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:8px;font-size:12px;font-family:'DM Mono',monospace;resize:vertical;min-height:70px;outline:none;}
-.nota-popup textarea:focus{border-color:var(--accent3);}
-.badge-purple{background:rgba(168,85,247,.12);color:#a855f7;border-radius:20px;font-size:11px;font-family:'DM Mono',monospace;padding:2px 9px;display:inline-block;}
-/* Rango de fechas */
-.date-range{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.date-range input[type=date]{background:var(--card);border:1px solid var(--border2);color:var(--text);padding:6px 8px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;}
-.date-range input[type=date]:focus{border-color:var(--accent);}
-.date-range span{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
-.pagination{display:flex;align-items:center;gap:6px;margin-top:14px;flex-wrap:wrap;}
-.page-btn{background:var(--card);border:1px solid var(--border2);color:var(--muted2);padding:5px 11px;border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;cursor:pointer;transition:all .15s;}
-.page-btn:hover{border-color:var(--accent);color:var(--accent);}
-.page-btn.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700;}
-.page-btn:disabled{opacity:.35;cursor:default;}
-.page-info{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);margin-left:4px;}
-.page-size-sel{background:var(--card);border:1px solid var(--border2);color:var(--muted2);padding:5px 8px;border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;cursor:pointer;margin-left:auto;}
-/* ══════════════════════════════════
-   RESPONSIVE MÓVIL
-══════════════════════════════════ */
-/* Hamburger button */
-.hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--text);font-size:22px;line-height:1;}
-/* Overlay when sidebar is open on mobile */
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:149;}
-.sidebar-overlay.open{display:block;}
-
-@media(max-width:768px){
-  /* Layout */
-  .shell{flex-direction:column;}
-  .sidebar{
-    position:fixed;top:0;left:0;height:100vh;z-index:150;
-    transform:translateX(-100%);transition:transform .25s ease;
-    width:260px;min-width:260px;
-  }
-  .sidebar.open{transform:translateX(0);}
-  .main{width:100%;min-width:0;}
-  .hamburger{display:flex;align-items:center;justify-content:center;}
-  .content{padding:12px 10px;}
-
-  /* Topbar */
-  .topbar{padding:10px 12px;gap:8px;flex-wrap:wrap;}
-  .page-title{font-size:15px;}
-  .sede-selector{flex-wrap:wrap;gap:6px;width:100%;}
-  .sede-selector label{display:none;}
-  .sede-selector select{min-width:0;flex:1;}
-  .status-pill{font-size:10px;padding:3px 8px;}
-
-  /* Cards */
-  .card{padding:14px 12px;margin-bottom:12px;}
-  .card-title{font-size:9px;}
-
-  /* Forms */
-  .form-grid{grid-template-columns:1fr !important;}
-  .btn-row{gap:8px;}
-  .btn{padding:8px 14px;font-size:12px;}
-
-  /* Horario grid */
-  .h-row{grid-template-columns:90px 90px 90px 80px 44px;}
-  .hc{padding:7px 6px;font-size:11px;}
-  .h-row-sm{grid-template-columns:80px 80px 80px 65px 40px;}
-
-  /* Tables — horizontal scroll */
-  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  table{min-width:600px;}
-  thead th{font-size:9px;padding:7px 8px;}
-  tbody td{font-size:11px;padding:8px 8px;}
-
-  /* Stats grid */
-  .stats-grid{grid-template-columns:1fr 1fr !important;}
-  .stat-val{font-size:20px;}
-
-  /* Filters */
-  .filter-bar{gap:6px;}
-  .filter-bar input,.filter-bar select{font-size:12px;padding:6px 8px;}
-
-  /* Dashboard — stack the two-col grid */
-  .dash-two-col{grid-template-columns:1fr !important;}
-
-  /* Pagination */
-  .pagination{gap:4px;}
-  .page-btn{padding:4px 8px;font-size:11px;}
-  .page-size-sel{font-size:11px;}
-  .page-info{font-size:10px;}
-
-  /* Limpiar btn */
-  .clear-all-btn{width:100%;justify-content:center;margin:4px 0;}
-
-  /* Toast */
-  #toast{bottom:12px;right:10px;left:10px;max-width:none;font-size:12px;}
-}
-
-@media(max-width:480px){
-  .stats-grid{grid-template-columns:1fr !important;}
-  .topbar{padding:8px 10px;}
-  .page-title{font-size:13px;}
-}
-</style>
-</head>
-<body>
-<div class="shell">
-<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
-
-<!-- SIDEBAR -->
-<aside class="sidebar" id="sidebar">
-  <div class="logo">
-    <div class="logo-mark">HH.EE · Hikvision</div>
-    <h1>Control de<br>Horas Extras</h1>
-  </div>
-  <nav class="nav">
-    <div class="nav-sec-label">Configuración</div>
-    <a class="nav-item active" data-sec="sedes"     onclick="go('sedes',this)">    <span class="ico">🏢</span>Sedes y Horarios</a>
-    <a class="nav-item"        data-sec="empleados" onclick="go('empleados',this)"><span class="ico">👥</span>Empleados</a>
-    <div class="nav-sec-label">Operación</div>
-    <a class="nav-item"        data-sec="dashboard" onclick="go('dashboard',this)"><span class="ico">📈</span>Dashboard</a>
-    <a class="nav-item"        data-sec="importar"  onclick="go('importar',this)"> <span class="ico">📁</span>Importar CSV</a>
-    <a class="nav-item"        data-sec="resultados"onclick="go('resultados',this)"><span class="ico">📊</span>Resultados</a>
-    <a class="nav-item"        data-sec="ausencias"  onclick="go('ausencias',this)"> <span class="ico">🚫</span>Ausencias</a>
-    <a class="nav-item"        data-sec="llegadas"   onclick="go('llegadas',this)">  <span class="ico">🕐</span>Reporte Llegadas</a>
-    <div class="nav-sec-label">Exportar</div>
-    <a class="nav-item"        data-sec="michel"    onclick="go('michel',this)">    <span class="ico">📋</span>Reporte Llegadas (Michel)</a>
-    <a class="nav-item"        data-sec="exportar"  onclick="go('exportar',this)">  <span class="ico">⬇️</span>Exportar Excel/PDF</a>
-    <div class="nav-sec-label" style="margin-top:auto;padding-top:16px;">Datos</div>
-    <a class="nav-item" onclick="confirmarLimpiarTodo()" style="color:var(--danger);border-left-color:transparent;">
-      <span class="ico">🗑</span>Limpiar todos los datos
-    </a>
-  </nav>
-  <div class="sidebar-footer">
-    <span id="db-info">⏳ BD…</span>
-    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">☀️ Claro</button>
-  </div>
-</aside>
-
-<!-- MAIN -->
-<div class="main">
-  <div class="topbar">
-    <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
-    <div class="page-title" id="pgTitle">Sedes y <span>Horarios</span></div>
-    <div class="sede-selector">
-      <label>Sede activa:</label>
-      <select id="sede-activa" onchange="onSedeActivaChange()">
-        <option value="">Todas las sedes</option>
-      </select>
-      <span class="status-pill pill-idle" id="spill">Sin datos</span>
-    </div>
-  </div>
-  <div class="content">
-
-    <!-- ═══ SEDES ═══ -->
-    <section class="section active" id="sec-sedes">
-      <div class="card">
-        <div class="card-title">Configurar sede</div>
-        <div class="form-grid" style="margin-bottom:18px;">
-          <div class="form-group" style="grid-column:1/-1;">
-            <label>Nombre de la sede</label>
-            <input id="s-nom" type="text" placeholder="Ej: Sede Centro">
-          </div>
-          <div class="form-group">
-            <label>Tolerancia llegada (minutos)</label>
-            <input id="s-tol" type="number" value="10" min="0" max="60">
-          </div>
-          <div class="form-group">
-            <label>Contabilizar entrada anticipada como HH.EE</label>
-            <select id="s-antici">
-              <option value="0">No (ignorar entradas antes del horario)</option>
-              <option value="1">Sí (contar minutos antes de la hora de entrada)</option>
-            </select>
-            <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:3px;">Actívalo para enfermeros, recepcionistas, etc. que entran antes por indicación del jefe</span>
-          </div>
-          <div class="form-group">
-            <label>Mínimo para contar horas extras (minutos)</label>
-            <input id="s-minext" type="number" value="15" min="0" max="60" title="Solo se cuentan extras si supera este umbral. Ej: 15 = se necesitan al menos 15 min extra para registrarlas.">
-            <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:3px;">Ej: 15 → solo se acumulan extras si el empleado salió ≥ 15 min después de su hora de salida</span>
-          </div>
-          <div class="form-group">
-            <label>Hora extras nocturnas desde</label>
-            <input id="s-noct" type="time" value="21:00">
-          </div>
-          <div class="form-group">
-            <label>Valor hora ordinaria (COP) — para recargos</label>
-            <input id="s-vhora" type="number" value="0" min="0" step="100" placeholder="Ej: 12500">
-            <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:3px;">Opcional. Se usa para calcular el valor en pesos de los recargos en el dashboard.</span>
-          </div>
-        </div>
-        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted2);margin-bottom:10px;letter-spacing:1px;">HORARIO POR DÍA — desactiva días no laborables</div>
-        <div class="horario-wrap">
-          <div class="h-row h-head">
-            <div class="hc">Día</div><div class="hc">Entrada</div><div class="hc">Salida</div><div class="hc">Almuerzo (min)</div><div class="hc">¿Laboral?</div>
-          </div>
-          <div class="h-row" id="dr-1"><div class="hc dname">Lunes</div>    <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
-          <div class="h-row" id="dr-2"><div class="hc dname">Martes</div>   <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
-          <div class="h-row" id="dr-3"><div class="hc dname">Miércoles</div><div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
-          <div class="h-row" id="dr-4"><div class="hc dname">Jueves</div>   <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
-          <div class="h-row" id="dr-5"><div class="hc dname" style="color:var(--accent3);">Viernes</div><div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="16:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc" checked></div></div>
-          <div class="h-row" id="dr-6"><div class="hc dname" style="color:var(--warn);">Sábado</div>   <div class="hc"><input type="time" class="de" value="09:00"></div><div class="hc"><input type="time" class="ds" value="14:00"></div><div class="hc"><input type="number" class="da" value="0"  min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc"></div></div>
-          <div class="h-row" id="dr-0"><div class="hc dname" style="color:var(--muted);">Domingo</div>  <div class="hc"><input type="time" class="de" value="08:00"></div><div class="hc"><input type="time" class="ds" value="17:00"></div><div class="hc"><input type="number" class="da" value="60" min="0" max="120" style="width:70px;"></div><div class="hc"><input type="checkbox" class="dc"></div></div>
-        </div>
-        <p class="help-text">💡 Viernes precargado 8–16h. Sábado 9–14h sin almuerzo. Cada sede puede tener su propio horario.</p>
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="guardarSede()">💾 Guardar sede</button>
-          <button class="btn btn-secondary" onclick="loadDemoSedes()">Cargar ejemplo</button>
-          <button class="btn btn-secondary btn-sm" id="btn-cancel-edit" style="display:none;" onclick="resetSedeForm()">✕ Cancelar</button>
-        </div>
-        <input type="hidden" id="s-eid">
-      </div>
-      <div class="card">
-        <div class="card-title">Sedes guardadas <span id="sc" class="tag">0</span></div>
-        <div id="sedes-list"><div class="empty-state"><div class="eico">🏢</div><p>Agrega tu primera sede.</p></div></div>
-      </div>
-    </section>
-
-    <!-- ═══ EMPLEADOS ═══ -->
-    <section class="section" id="sec-empleados">
-      <div class="card">
-        <div class="card-title">Registrar empleado</div>
-        <div class="form-grid">
-          <div class="form-group"><label>ID del CSV (Card No.)</label><input id="e-id" type="text" placeholder="00123"></div>
-          <div class="form-group"><label>Nombre completo</label><input id="e-nom" type="text" placeholder="Juan Pérez"></div>
-          <div class="form-group"><label>Sede asignada</label><select id="e-sede"><option value="">— selecciona —</option></select></div>
-          <div class="form-group"><label>Cargo (opcional)</label><input id="e-cargo" type="text" placeholder="Vendedor"></div>
-        </div>
-
-        <!-- HORARIOS PERSONALIZADOS A / B -->
-        <div style="margin-top:16px;">
-          <div class="emp-sched-toggle" onclick="toggleEmpSched()">
-            <span id="emp-sched-arrow">▶</span> Horarios personalizados (opcional — si difieren del de la sede)
-          </div>
-          <div class="emp-sched-box" id="emp-sched-box">
-            <p class="help-text" style="margin:10px 12px 0;">Define uno o dos horarios rotativos. El sistema usará el horario vigente según la fecha del CSV. Si solo usas Horario A, deja el B sin activar.</p>
-
-            <!-- TAB selector -->
-            <div style="display:flex;gap:0;margin:12px 0 0;border-bottom:1px solid var(--border);">
-              <button id="tab-ha" onclick="switchSchedTab('A')" style="padding:7px 18px;font-size:12px;font-family:'DM Mono',monospace;font-weight:700;background:var(--accent);color:#000;border:none;border-radius:8px 8px 0 0;cursor:pointer;">Horario A</button>
-              <button id="tab-hb" onclick="switchSchedTab('B')" style="padding:7px 18px;font-size:12px;font-family:'DM Mono',monospace;font-weight:700;background:transparent;color:var(--muted2);border:none;border-radius:8px 8px 0 0;cursor:pointer;border-bottom:2px solid transparent;">Horario B</button>
-            </div>
-
-            <!-- HORARIO A -->
-            <div id="sched-panel-A" style="padding:12px 0 4px;">
-              <div style="display:flex;align-items:center;gap:16px;padding:0 4px 10px;flex-wrap:wrap;">
-                <div class="form-group" style="flex:1;min-width:160px;">
-                  <label>Vigente desde (Horario A)</label>
-                  <input type="date" id="e-ha-desde" style="background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;width:100%;">
-                  <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">Vacío = desde siempre</span>
-                </div>
-              </div>
-              <div class="h-row-sm h-head-sm">
-                <div class="hc">Día</div><div class="hc">Entrada</div><div class="hc">Salida</div><div class="hc">Almuerzo</div><div class="hc">Lab.</div>
-              </div>
-              <div class="h-row-sm" id="edr-1"><div class="hc dname" style="font-size:12px;">Lunes</div>    <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
-              <div class="h-row-sm" id="edr-2"><div class="hc dname" style="font-size:12px;">Martes</div>   <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
-              <div class="h-row-sm" id="edr-3"><div class="hc dname" style="font-size:12px;">Miércoles</div><div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
-              <div class="h-row-sm" id="edr-4"><div class="hc dname" style="font-size:12px;">Jueves</div>   <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
-              <div class="h-row-sm" id="edr-5"><div class="hc dname" style="font-size:12px;">Viernes</div>  <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="16:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc" checked></div></div>
-              <div class="h-row-sm" id="edr-6"><div class="hc dname" style="font-size:12px;">Sábado</div>   <div class="hc"><input type="time" class="ede" value="09:00"></div><div class="hc"><input type="time" class="eds" value="14:00"></div><div class="hc"><input type="number" class="eda" value="0"  min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc"></div></div>
-              <div class="h-row-sm" id="edr-0"><div class="hc dname" style="font-size:12px;">Domingo</div>  <div class="hc"><input type="time" class="ede" value="08:00"></div><div class="hc"><input type="time" class="eds" value="17:00"></div><div class="hc"><input type="number" class="eda" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edc"></div></div>
-            </div>
-
-            <!-- HORARIO B -->
-            <div id="sched-panel-B" style="display:none;padding:12px 0 4px;">
-              <div style="display:flex;align-items:center;gap:16px;padding:0 4px 10px;flex-wrap:wrap;">
-                <div class="form-group" style="flex:1;min-width:160px;">
-                  <label>Vigente desde (Horario B)</label>
-                  <input type="date" id="e-hb-desde" style="background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;width:100%;">
-                  <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">Vacío = no se usa</span>
-                </div>
-                <div class="form-group" style="flex:1;min-width:160px;">
-                  <label>Vigente hasta (Horario B)</label>
-                  <input type="date" id="e-hb-hasta" style="background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;font-family:'DM Mono',monospace;outline:none;width:100%;">
-                  <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">Vacío = aplica indefinidamente</span>
-                </div>
-              </div>
-              <div class="h-row-sm h-head-sm">
-                <div class="hc">Día</div><div class="hc">Entrada</div><div class="hc">Salida</div><div class="hc">Almuerzo</div><div class="hc">Lab.</div>
-              </div>
-              <div class="h-row-sm" id="edrb-1"><div class="hc dname" style="font-size:12px;">Lunes</div>    <div class="hc"><input type="time" class="edeb" value="10:00"></div><div class="hc"><input type="time" class="edsb" value="16:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb" checked></div></div>
-              <div class="h-row-sm" id="edrb-2"><div class="hc dname" style="font-size:12px;">Martes</div>   <div class="hc"><input type="time" class="edeb" value="10:00"></div><div class="hc"><input type="time" class="edsb" value="16:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb" checked></div></div>
-              <div class="h-row-sm" id="edrb-3"><div class="hc dname" style="font-size:12px;">Miércoles</div><div class="hc"><input type="time" class="edeb" value="10:00"></div><div class="hc"><input type="time" class="edsb" value="16:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb" checked></div></div>
-              <div class="h-row-sm" id="edrb-4"><div class="hc dname" style="font-size:12px;">Jueves</div>   <div class="hc"><input type="time" class="edeb" value="10:00"></div><div class="hc"><input type="time" class="edsb" value="16:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb" checked></div></div>
-              <div class="h-row-sm" id="edrb-5"><div class="hc dname" style="font-size:12px;">Viernes</div>  <div class="hc"><input type="time" class="edeb" value="10:00"></div><div class="hc"><input type="time" class="edsb" value="14:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb" checked></div></div>
-              <div class="h-row-sm" id="edrb-6"><div class="hc dname" style="font-size:12px;">Sábado</div>   <div class="hc"><input type="time" class="edeb" value="09:00"></div><div class="hc"><input type="time" class="edsb" value="13:00"></div><div class="hc"><input type="number" class="edab" value="0" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb"></div></div>
-              <div class="h-row-sm" id="edrb-0"><div class="hc dname" style="font-size:12px;">Domingo</div>  <div class="hc"><input type="time" class="edeb" value="08:00"></div><div class="hc"><input type="time" class="edsb" value="17:00"></div><div class="hc"><input type="number" class="edab" value="60" min="0" max="120" style="width:60px;"></div><div class="hc"><input type="checkbox" class="edcb"></div></div>
-            </div>
-
-            <p class="help-text" style="padding:0 4px 10px;">💡 Ej. doctora: Horario A = 8–14h (sin "desde"). Horario B = 10–16h, desde la fecha en que empiece esa rotación.</p>
-          </div>
-          <p class="help-text">Si dejas el horario personalizado cerrado (▶), el empleado usará el horario de su sede.</p>
-        </div>
-
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="guardarEmp()">＋ Agregar empleado</button>
-          <button class="btn btn-secondary" onclick="importarEmpCSV()">📥 Importar IDs del CSV</button>
-          <button class="btn btn-secondary btn-sm" id="btn-cancel-emp" style="display:none;" onclick="resetEmpForm()">✕ Cancelar edición</button>
-        </div>
-        <input type="hidden" id="e-eid">
-      </div>
-      <div class="card">
-        <div class="card-title">Empleados <span id="ec" class="tag">0</span></div>
-        <div class="filter-bar">
-          <input id="ef-q" type="text" placeholder="Buscar…" oninput="renderEmps()" style="flex:1;min-width:150px;">
-          <select id="ef-sede" onchange="renderEmps()"><option value="">Todas las sedes</option></select>
-        </div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>ID</th><th>Nombre</th><th>Sede</th><th>Cargo</th><th>Horario</th><th></th></tr></thead>
-          <tbody id="etb"></tbody>
-        </table></div>
-      </div>
-    </section>
-
-    <!-- ═══ DASHBOARD ═══ -->
-    <section class="section" id="sec-dashboard">
-      <div id="dash-alerts-area"></div>
-      <div id="dash-stats-area"></div>
-      <div class="card">
-        <div class="card-title">📊 Horas extras por empleado — mes</div>
-        <div class="filter-bar" style="margin-bottom:14px;">
-          <select id="df-sede" onchange="renderDash()"><option value="">Todas las sedes</option></select>
-          <select id="df-mes"  onchange="renderDash()"><option value="">Todos los meses</option></select>
-        </div>
-        <canvas id="dash-chart" style="width:100%;max-height:320px;"></canvas>
-        <div id="dash-chart-empty" class="empty-state" style="display:none;"><div class="eico">📈</div><p>Procesa un CSV para ver la gráfica.</p></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;" class="dash-two-col">
-        <div class="card">
-          <div class="card-title">🏆 Ranking HH.EE acumuladas</div>
-          <div id="dash-ranking"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">📅 Calendario del mes</div>
-          <div class="filter-bar" style="margin-bottom:10px;">
-            <select id="df-cal-emp" onchange="renderCalendar()" style="flex:1;min-width:140px;"><option value="">— Empleado —</option></select>
-          </div>
-          <div id="dash-calendar"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">💰 Recargos por tipo (legislación colombiana)</div>
-        <div id="dash-recargos"></div>
-        <p class="help-text" style="margin-top:10px;">Basado en el SMMLV y porcentajes del Código Sustantivo del Trabajo: HE diurna +25%, HE nocturna +75%, HE dominical/festiva diurna +100%, HE dominical/festiva nocturna +150%.</p>
-      </div>
-    </section>
-
-    <!-- ═══ IMPORTAR ═══ -->
-    <section class="section" id="sec-importar">
-      <div class="card">
-        <div class="card-title">Formato iVMS-4200</div>
-        <div style="background:var(--bg);border-radius:8px;padding:13px 15px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);line-height:2.2;border:1px solid var(--border);">
-          <span style="color:var(--accent);">No.</span>, <span style="color:var(--accent3);">Card No.</span>, <span style="color:var(--accent);">Name</span>, <span style="color:var(--accent3);">Department</span>, <span style="color:var(--accent);">Time</span><br>
-          <span style="color:var(--muted);">1, 00001, Juan Perez, Ventas, 2024/01/15 08:03:00</span>
-        </div>
-        <p class="help-text">Separador y columnas se detectan automáticamente.</p>
-      </div>
-      <div class="card">
-        <div class="card-title">Cargar archivo</div>
-        <div class="upload-zone" id="dz">
-          <input type="file" id="csvf" accept=".csv,.txt" onchange="handleFile(event)">
-          <div class="upload-icon">📂</div>
-          <h3>Arrastra el CSV aquí o haz clic</h3>
-          <p>iVMS-4200 · .csv o .txt · separador auto-detectado</p>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-secondary btn-sm" onclick="loadDemo()">🧪 Datos de prueba</button>
-        </div>
-      </div>
-      <div class="card" id="prev-card" style="display:none;">
-        <div class="card-title">Vista previa</div>
-        <div id="csv-stats"></div>
-        <div class="table-wrap" id="csv-prev"></div>
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="procesar()">⚡ Calcular horas extras</button>
-          <button class="btn btn-secondary" onclick="clearCSV()">✕ Limpiar</button>
-        </div>
-        <div class="progress-bar" id="pbar" style="display:none;"><div class="progress-fill" id="pfill" style="width:0%"></div></div>
-      </div>
-    </section>
-
-    <!-- ═══ RESULTADOS ═══ -->
-    <section class="section" id="sec-resultados">
-      <div id="stats-area"></div>
-      <div class="card">
-        <div class="card-title">Detalle diario por empleado</div>
-        <div class="filter-bar">
-          <input id="rf-q" type="text" placeholder="Buscar empleado…" oninput="renderRes()" style="flex:1;min-width:150px;">
-          <select id="rf-sede" onchange="renderRes()"><option value="">Todas las sedes</option></select>
-          <select id="rf-mes" onchange="renderRes()"><option value="">Todos los meses</option></select>
-          <div class="date-range">
-            <input type="date" id="rf-desde" onchange="renderRes()" title="Desde">
-            <span>–</span>
-            <input type="date" id="rf-hasta" onchange="renderRes()" title="Hasta">
-          </div>
-          <select id="rf-tipo" onchange="renderRes()">
-            <option value="">Todos</option>
-            <option value="extras">Con HH.EE</option>
-            <option value="tardanza">Con tardanza</option>
-            <option value="incompleto">Sin salida</option>
-          </select>
-        </div>
-        <div class="table-wrap"><table>
-          <thead><tr>
-            <th>Empleado</th><th>Sede</th><th>Fecha</th><th>Día</th>
-            <th>Entrada</th><th>Salida</th><th>Horas trabajadas</th>
-            <th>Tardanza</th><th>Almuerzo</th>
-            <th>HE Diurnas</th><th>HE Nocturnas</th>
-            <th>Total HE</th><th>Estado</th><th>Nota</th>
-          </tr></thead>
-          <tbody id="rtb"><tr><td colspan="14"><div class="empty-state"><div class="eico">📊</div><p>Importa y procesa un CSV primero.</p></div></td></tr></tbody>
-        </table></div>
-        <div id="res-pagination" class="pagination"></div>
-      </div>
-    </section>
-
-    <!-- ═══ REPORTE MICHEL ═══ -->
-    <section class="section" id="sec-michel">
-      <div class="card">
-        <div class="card-title">📋 Reporte de Horas de Llegada</div>
-        <p class="help-text" style="margin-bottom:14px;">Una tabla por empleado con Fecha, Día y Hora de Llegada. Las filas en rojo indican llegada tarde. Total de días al pie de cada tabla.</p>
-        <div class="filter-bar">
-          <select id="mf-sede" onchange="renderMichel()"><option value="">Todas las sedes</option></select>
-          <select id="mf-mes"  onchange="renderMichel()"><option value="">Todos los meses</option></select>
-          <div class="date-range">
-            <input type="date" id="mf-desde" onchange="renderMichel()" title="Desde">
-            <span>–</span>
-            <input type="date" id="mf-hasta" onchange="renderMichel()" title="Hasta">
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="exportMichelXLSX()">📥 Excel</button>
-          <button class="btn btn-secondary btn-sm" onclick="exportMichelPDF()">📄 PDF</button>
-        </div>
-        <div id="michel-area"><div class="empty-state"><div class="eico">📋</div><p>Procesa un CSV primero.</p></div></div>
-      </div>
-    </section>
-
-    <!-- ═══ EXPORTAR ═══ -->
-    <section class="section" id="sec-exportar">
-      <div class="card">
-        <div class="card-title">Opciones de exportación</div>
-        <div class="form-grid">
-          <div class="form-group"><label>Sede</label><select id="xf-sede"><option value="">Todas</option></select></div>
-          <div class="form-group"><label>Mes</label><select id="xf-mes"><option value="">Todos</option></select></div>
-          <div class="form-group"><label>Columnas extra</label>
-            <div style="display:flex;flex-direction:column;gap:7px;margin-top:4px;">
-              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-t" checked> Tardanza</label>
-              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-g" checked> Almuerzo/Gabela</label>
-              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-d" checked> HE Diurnas / Nocturnas separadas</label>
-              <label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="xc-trab" checked> Horas trabajadas</label>
-            </div>
-          </div>
-          <div class="form-group"><label>Formato de reporte</label>
-            <select id="xf-formato">
-              <option value="por_empleado">Un archivo por empleado (como imagen)</option>
-              <option value="consolidado">Un archivo consolidado (todas las sedes)</option>
-            </select>
-          </div>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="exportXLSX()">📥 Exportar .xlsx</button>
-          <button class="btn btn-secondary" onclick="exportExtrassPDF()">📄 Exportar PDF</button>
-          <button class="btn btn-secondary" onclick="exportCSV()">📄 Exportar .csv</button>
-        </div>
-        <p class="help-text" style="margin-top:12px;">
-          <strong style="color:var(--text);">Un archivo por empleado:</strong> genera un .xlsx con una hoja por cada colaborador, con el mismo formato de la imagen (encabezado con nombre, tabla de días y totales al pie).<br>
-          <strong style="color:var(--text);">Consolidado:</strong> todo en un archivo con 3 hojas: detalle diario, resumen por empleado, resumen por sede.
-        </p>
-      </div>
-      <div class="card">
-        <div class="card-title">Resumen consolidado por empleado</div>
-        <div id="consol-area"><div class="empty-state"><div class="eico">📋</div><p>Procesa datos primero.</p></div></div>
-      </div>
-    </section>
-
-    <!-- ═══ LLEGADAS ═══ -->
-    <section class="section" id="sec-llegadas">
-      <div id="llegadas-stats-area"></div>
-      <div class="card">
-        <div class="card-title">🕐 Reporte de llegadas y puntualidad</div>
-        <div class="filter-bar">
-          <input id="lf-q" type="text" placeholder="Buscar empleado…" oninput="renderLlegadas()" style="flex:1;min-width:150px;">
-          <select id="lf-sede" onchange="renderLlegadas()"><option value="">Todas las sedes</option></select>
-          <select id="lf-mes"  onchange="renderLlegadas()"><option value="">Todos los meses</option></select>
-          <div class="date-range">
-            <input type="date" id="lf-desde" onchange="renderLlegadas()" title="Desde">
-            <span>–</span>
-            <input type="date" id="lf-hasta" onchange="renderLlegadas()" title="Hasta">
-          </div>
-          <select id="lf-tipo" onchange="renderLlegadas()">
-            <option value="">Todos</option>
-            <option value="puntual">Puntual</option>
-            <option value="tarde">Tarde</option>
-            <option value="sin_salida">Sin salida</option>
-          </select>
-          <button class="btn btn-primary btn-sm" onclick="exportLlegadasXLSX()">📥 Excel</button>
-          <button class="btn btn-secondary btn-sm" onclick="exportLlegadasPDF()">📄 PDF</button>
-          <button class="btn btn-secondary btn-sm" onclick="exportReporteMichel('xlsx')">👤 Reporte llegadas</button>
-        </div>
-        <div class="table-wrap"><table>
-          <thead><tr>
-            <th>Empleado</th><th>Sede</th><th>Fecha</th><th>Día</th>
-            <th>Hora entrada</th><th>Esperada</th><th>Diferencia</th>
-            <th>Hora salida</th><th>Sal. esperada</th><th>Dif. salida</th>
-            <th>Horario usado</th><th>Estado</th>
-          </tr></thead>
-          <tbody id="llegadas-tb"><tr><td colspan="12"><div class="empty-state"><div class="eico">🕐</div><p>Procesa un CSV primero.</p></div></td></tr></tbody>
-        </table></div>
-        <div id="llegadas-pagination" class="pagination"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">📋 Resumen de puntualidad por empleado</div>
-        <div id="llegadas-resumen"></div>
-      </div>
-    </section>
-
-    <!-- ═══ AUSENCIAS ═══ -->
-    <section class="section" id="sec-ausencias">
-      <div id="aus-stats-area"></div>
-      <div class="card">
-        <div class="card-title">🚫 Días laborables sin registro</div>
-        <p class="help-text" style="margin-bottom:14px;">Se muestran todos los días laborables (según el horario de cada empleado) para los que <strong>no existe ningún registro</strong> en el CSV importado. Esto puede indicar ausencia, olvido de fichar, o día no trabajado.</p>
-        <div class="filter-bar">
-          <input id="af-q" type="text" placeholder="Buscar empleado…" oninput="renderAusencias()" style="flex:1;min-width:150px;">
-          <select id="af-sede" onchange="renderAusencias()"><option value="">Todas las sedes</option></select>
-          <select id="af-mes"  onchange="renderAusencias()"><option value="">Todos los meses</option></select>
-          <div class="date-range">
-            <input type="date" id="af-desde" onchange="renderAusencias()" title="Desde">
-            <span>–</span>
-            <input type="date" id="af-hasta" onchange="renderAusencias()" title="Hasta">
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="exportAusenciasXLSX()">📥 Excel</button>
-          <button class="btn btn-secondary btn-sm" onclick="exportAusenciasPDF()">📄 PDF</button>
-        </div>
-        <div class="table-wrap"><table>
-          <thead><tr>
-            <th>Empleado</th><th>Sede</th><th>Fecha</th><th>Día</th>
-            <th>Horario esperado</th><th>Horas contrato</th><th>Justificación</th>
-          </tr></thead>
-          <tbody id="aus-tb"><tr><td colspan="7"><div class="empty-state"><div class="eico">🚫</div><p>Procesa un CSV primero.</p></div></td></tr></tbody>
-        </table></div>
-        <div id="aus-pagination" class="pagination"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">📋 Resumen de ausencias por empleado</div>
-        <div id="aus-resumen"></div>
-      </div>
-    </section>
-
-  </div>
-</div>
-</div>
-
-<!-- MODAL IMPORTAR EMPLEADOS -->
-<div class="modal-overlay" id="modal-import">
-  <div class="modal-box">
-    <div class="modal-title">Importar empleados del CSV</div>
-    <div class="modal-sub" id="modal-import-sub">Se detectaron <strong id="modal-import-count">0</strong> empleados nuevos en el archivo.</div>
-    <div class="form-group" style="margin-bottom:14px;">
-      <label>Asignar todos a la sede</label>
-      <select id="modal-import-sede" style="background:var(--input-bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;outline:none;">
-        <option value="">— selecciona —</option>
-      </select>
-    </div>
-    <div id="modal-import-preview" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:'DM Mono',monospace;color:var(--muted2);background:var(--bg);"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-import')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarImport()">✓ Importar</button>
-    </div>
-  </div>
-</div>
-<div id="toast"></div>
-
-<!-- POPUP NOTA -->
-<div class="nota-popup" id="nota-popup" style="display:none;">
-  <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted2);margin-bottom:8px;" id="nota-popup-label">Nota</div>
-  <textarea id="nota-popup-text" placeholder="Ej: permiso médico, comisión, día libre pactado…" maxlength="200"></textarea>
-  <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end;">
-    <button class="btn btn-secondary btn-sm" onclick="closeNotaPopup()">Cancelar</button>
-    <button class="btn btn-primary btn-sm" onclick="saveNota()">Guardar</button>
-  </div>
-</div>
-
-<!-- MODAL LIMPIAR TODO -->
-<div class="modal-overlay" id="modal-clear">
-  <div class="modal-box">
-    <div class="modal-title">🗑 Limpiar todos los datos</div>
-    <div class="modal-sub">Se eliminarán <strong>todos los resultados calculados</strong>. Las sedes y empleados configurados se conservarán. Esta acción no se puede deshacer.</div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-clear')">Cancelar</button>
-      <button class="btn" style="background:var(--danger);color:#fff;" onclick="limpiarTodo()">🗑 Sí, limpiar resultados</button>
-    </div>
-  </div>
-</div>
-
-<script>
 // ══════════════════════════════════════════
 //  INDEXEDDB
 // ══════════════════════════════════════════
@@ -852,8 +65,9 @@ function toggleTheme(){
 // ══════════════════════════════════════════
 //  NAV
 // ══════════════════════════════════════════
-const NTITLES={sedes:'Sedes y <span>Horarios</span>',empleados:'Gestión de <span>Empleados</span>',dashboard:'<span>Dashboard</span>',importar:'Importar <span>CSV</span>',resultados:'Ver <span>Resultados</span>',ausencias:'<span>Ausencias</span>',llegadas:'Reporte de <span>Llegadas</span>',michel:'Reporte de <span>Llegadas (Michel)</span>',exportar:'Exportar <span>Excel / PDF</span>'};
-
+const NTITLES = {
+  sedes: 'Sedes y <span>Horarios</span>',  empleados: 'Gestión de <span>Empleados</span>',  dashboard: '<span>Dashboard</span>',  importar: 'Importar <span>CSV</span>',  resultados: 'Ver <span>Resultados</span>',  ausencias: '<span>Ausencias</span>',  llegadas: 'Reporte de <span>Llegadas</span>',  michel: 'Reporte de <span>Llegadas (Michel)</span>',  exportar: 'Exportar <span>Excel / PDF</span>',  about: 'Acerca <span>de</span>'  // ← agregar esto
+};
 function onSedeActivaChange(){
   sedeActiva = document.getElementById('sede-activa').value;
   localStorage.setItem('sedeActiva', sedeActiva);
@@ -908,8 +122,32 @@ function go(name,el){
 //  TOAST / SPILL
 // ══════════════════════════════════════════
 let _tt;
-function toast(msg,t='info'){const el=document.getElementById('toast');el.textContent=msg;el.className='show '+t;clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3500);}
-function spill(t,msg){const el=document.getElementById('spill');el.textContent=msg;el.className='status-pill '+(t==='ok'?'pill-ok':t==='warn'?'pill-warn':'pill-idle');}
+function toast(msg, type = 'info', duration = 3500) {
+  const icons = { success: '✅', error: '❌', warn: '⚠️', info: 'ℹ️' }
+  const colors = { success: 'var(--success)', error: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent3)' }
+
+  const t = document.createElement('div')
+  t.className = 'toast-v2'
+  t.innerHTML = `
+    <span class="toast-icon">${icons[type] || icons.info}</span>
+    <span class="toast-msg">${msg}</span>
+    <div class="toast-bar" style="--dur:${duration}ms;--col:${colors[type] || colors.info}"></div>
+  `
+
+  let container = document.getElementById('toast-container')
+  if (!container) {
+    container = document.createElement('div')
+    container.id = 'toast-container'
+    document.body.appendChild(container)
+  }
+  container.appendChild(t)
+
+  setTimeout(() => t.classList.add('show'), 10)
+  setTimeout(() => {
+    t.classList.remove('show')
+    setTimeout(() => t.remove(), 300)
+  }, duration)
+}function spill(t,msg){const el=document.getElementById('spill');el.textContent=msg;el.className='status-pill '+(t==='ok'?'pill-ok':t==='warn'?'pill-warn':'pill-idle');}
 
 // ── Sidebar móvil ──
 function toggleSidebar(){
@@ -1149,7 +387,9 @@ async function guardarEmp(){
       hbHasta=document.getElementById('e-hb-hasta').value||null;
     }
   }
-  const e={id,nombre:nom,sedeId:sid,cargo,diasPersonal,haDesde,diasPersonalB,hbDesde,hbHasta};
+  const e={id,nombre:nom,sedeId:sid,cargo,diasPersonal,descansos,haDesde,diasPersonalB,hbDesde,hbHasta};
+  const descansos = document.getElementById('e-descansos').value
+  .split(',').map(d=>d.trim()).filter(Boolean);
   await dbPut('empleados',e);
   const i=S.empleados.findIndex(x=>x.id===id);
   if(i>=0)S.empleados[i]=e;else S.empleados.push(e);
@@ -1166,6 +406,7 @@ function editEmp(id){
   document.getElementById('e-sede').value=e.sedeId;
   document.getElementById('e-cargo').value=e.cargo||'';
   document.getElementById('e-eid').value=e.id;
+  document.getElementById('e-descansos').value = (e.descansos||[]).join(', ');
   document.getElementById('btn-cancel-emp').style.display='inline-flex';
   if(e.diasPersonal){
     if(!empSchedOpen) toggleEmpSched();
@@ -1187,6 +428,7 @@ function resetEmpForm(){
   document.getElementById('btn-cancel-emp').style.display='none';
   document.getElementById('e-ha-desde').value='';
   document.getElementById('e-hb-desde').value='';
+  document.getElementById('e-descansos').value='';
   document.getElementById('e-hb-hasta').value='';
   if(empSchedOpen) toggleEmpSched();
   switchSchedTab('A');
@@ -1552,7 +794,7 @@ const EBADGE={
   'Sin salida':'<span class="badge badge-gray">Sin salida</span>',
   'Incompleto':'<span class="badge badge-gray">Incompleto</span>',
 };
-let _resPage=1, _resPageSize=25, _resFiltered=[];
+let _resPage=1, _resPageSize=15, _resFiltered=[];
 function renderRes(resetPage=true){
   const q=(document.getElementById('rf-q')?.value||'').toLowerCase();
   const sfRaw2=document.getElementById('rf-sede')?.value||'';
@@ -2074,10 +1316,10 @@ function renderRecargos(data){
   document.getElementById('dash-recargos').innerHTML=`<div class="table-wrap"><table>
     <thead><tr>
       <th>Empleado</th><th>Sede</th>
-      <th>HE Diur. Ord. <span style="color:var(--accent);font-size:9px;">(+25%)</span></th>
-      <th>HE Noct. Ord. <span style="color:var(--accent3);font-size:9px;">(+75%)</span></th>
-      <th>HE Diur. Fest. <span style="color:var(--warn);font-size:9px;">(+100%)</span></th>
-      <th>HE Noct. Fest. <span style="color:var(--danger);font-size:9px;">(+150%)</span></th>
+      <th>HE Diur. Ord. <span style="color:var(--text);font-size:9px;">(+25%)</span></th>
+      <th>HE Noct. Ord. <span style="color:var(--text);font-size:9px;">(+75%)</span></th>
+      <th>HE Diur. Fest. <span style="color:var(--text);font-size:9px;">(+100%)</span></th>
+      <th>HE Noct. Fest. <span style="color:var(--text);font-size:9px;">(+150%)</span></th>
       <th>Valor total</th>
     </tr></thead>
     <tbody>${rows.sort((a,b)=>(b.heDiurOrd+b.heNoctOrd+b.heDiurFest+b.heNoctFest)-(a.heDiurOrd+a.heNoctOrd+a.heDiurFest+a.heNoctFest)).map(e=>{
@@ -2162,7 +1404,7 @@ function renderPagination(containerId, total, currentPage, pageSize, onPage, onS
     <button class="page-btn" ${currentPage===totalPages?'disabled':''} onclick="_pgGo('${containerId}',${currentPage+1})">›</button>
     <span class="page-info">${start}–${end} de ${total}</span>
     <select class="page-size-sel" onchange="_pgSize('${containerId}',parseInt(this.value))">
-      ${[25,50,100,200].map(s=>`<option value="${s}"${s===pageSize?' selected':''}>${s} / pág</option>`).join('')}
+      ${[15,25,50,100].map(s=>`<option value="${s}"${s===pageSize?' selected':''}>${s} / pág</option>`).join('')}
     </select>`;
 }
 function _pgGo(id, page){
@@ -2174,7 +1416,7 @@ function _pgSize(id, size){
   if(h) h.onSize(size);
 }
 
-let _llegPage=1, _llegPageSize=25, _llegFiltered=[];
+let _llegPage=1, _llegPageSize=15, _llegFiltered=[];
 function renderLlegadas(resetPage=true){
   const q=(document.getElementById('lf-q')?.value||'').toLowerCase();
   const sf=document.getElementById('lf-sede')?.value||sedeActiva||'';
@@ -2445,7 +1687,7 @@ document.addEventListener('click', e=>{
 // ══════════════════════════════════════════
 //  AUSENCIAS
 // ══════════════════════════════════════════
-let _ausPage=1, _ausPageSize=25, _ausFiltered=[];
+let _ausPage=1, _ausPageSize=15, _ausFiltered=[];
 
 function fillAusenciasFilters(){
   const aSede=document.getElementById('af-sede'); if(!aSede)return;
@@ -2488,7 +1730,8 @@ function calcAusencias(){
       const dc = diasSrc[dow];
       const esLab = !!(dc?.activo);
       // Si es laborable y NO hay registro → ausencia
-      if(esLab && !registrados.has(emp.id+'_'+fechaStr) && !esFestivo(fechaStr)){
+      const esDescanso=(emp.descansos||[]).includes(fechaStr);
+      if(esLab && !registrados.has(emp.id+'_'+fechaStr) && !esFestivo(fechaStr) && !esDescanso){
         const horas = dc ? ((t2m(dc.salida)-t2m(dc.entrada)-parseInt(dc.almuerzo||0))/60).toFixed(1) : '—';
         ausencias.push({
           empId: emp.id, empNom: emp.nombre,
@@ -2990,53 +2233,70 @@ function exportReporteMichel(fmt){
     XLSX.writeFile(wb,'reporte_llegadas_'+new Date().toISOString().slice(0,10)+'.xlsx');
     toast('Excel generado: '+emps.length+' empleado(s)','success');
 
-  } else {
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const W=doc.internal.pageSize.getWidth();
-    emps.forEach((emp,ei)=>{
-      if(ei>0) doc.addPage();
-      emp.rows.sort((a,b)=>a.fecha.localeCompare(b.fecha));
-      doc.setFillColor(26,58,42); doc.rect(0,0,W,22,'F');
-      doc.setTextColor(255,255,255);
-      doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.text('REPORTE DE HORAS DE LLEGADA',14,9);
-      doc.setFontSize(13); doc.setFont('helvetica','bold');
-      doc.text('Colaborador: '+emp.nom,14,18);
-      doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.setTextColor(180,220,200);
-      doc.text(emp.sede,W-14,18,{align:'right'});
-      doc.autoTable({
-        startY:27,
-        head:[['Fecha','Dia de la Semana','Hora de Llegada']],
-        body:emp.rows.map(r=>[fmtFecha(r.fecha),r.dia,r.entrada]),
-        styles:{fontSize:10,cellPadding:3,textColor:[30,30,30]},
-        headStyles:{fillColor:[0,165,114],textColor:[255,255,255],fontStyle:'bold',halign:'center'},
-        alternateRowStyles:{fillColor:[244,251,247]},
-        columnStyles:{0:{halign:'left',fontStyle:'bold'},1:{halign:'center'},2:{halign:'center'}},
-        margin:{left:14,right:14},
-        didParseCell:(data)=>{
-          if(data.section==='body'){
-            const r=emp.rows[data.row.index];
-            if(r&&r.tardanza>0){
-              data.cell.styles.fillColor=[255,229,229];
-              data.cell.styles.textColor=[180,0,0];
-              data.cell.styles.fontStyle='bold';
-            }
+  }  else {
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=doc.internal.pageSize.getWidth();
+  const H=doc.internal.pageSize.getHeight();
+  let firstEmp=true;
+
+  emps.forEach((emp)=>{
+    emp.rows.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+
+    // Si no es el primero y la tabla anterior terminó muy abajo, nueva página
+    const curY = firstEmp ? 0 : (doc.lastAutoTable?.finalY||0);
+    const spaceNeeded = 28 + emp.rows.length*7 + 20; // header + filas + total
+    if(!firstEmp && curY + spaceNeeded > H - 15) doc.addPage();
+    firstEmp=false;
+
+    const startY = firstEmp===false ? (doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY+12 : 10) : 10;
+    const useY = (doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY+14 : 10);
+    
+    // Mini encabezado por empleado (no barra completa, solo texto)
+    const headerY = doc.lastAutoTable ? doc.lastAutoTable.finalY+14 : 10;
+    doc.setFillColor(26,58,42);
+    doc.roundedRect(14, headerY-5, W-28, 10, 2, 2, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('Colaborador: '+emp.nom, 18, headerY+1.5);
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.setTextColor(180,220,200);
+    doc.text(emp.sede, W-16, headerY+1.5, {align:'right'});
+
+    doc.autoTable({
+      startY: headerY+7,
+      head:[['Fecha','Dia de la Semana','Hora de Llegada']],
+      body:emp.rows.map(r=>[fmtFecha(r.fecha),r.dia,r.entrada]),
+      styles:{fontSize:9,cellPadding:2,textColor:[30,30,30]},
+      headStyles:{fillColor:[0,165,114],textColor:[255,255,255],fontStyle:'bold',halign:'center'},
+      alternateRowStyles:{fillColor:[244,251,247]},
+      columnStyles:{0:{halign:'left',fontStyle:'bold'},1:{halign:'center'},2:{halign:'center'}},
+      margin:{left:14,right:14},
+      didParseCell:(data)=>{
+        if(data.section==='body'){
+          const r=emp.rows[data.row.index];
+          if(r&&r.tardanza>0){
+            data.cell.styles.fillColor=[255,229,229];
+            data.cell.styles.textColor=[180,0,0];
+            data.cell.styles.fontStyle='bold';
           }
         }
-      });
-      const fy=doc.lastAutoTable.finalY+7;
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(26,58,42);
-      doc.text('Total de dias registrados: '+emp.rows.length,14,fy);
-      doc.setFontSize(7); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
-      doc.text('Control HH.EE  |  '+new Date().toLocaleDateString('es-CO'),W/2,doc.internal.pageSize.getHeight()-6,{align:'center'});
+      }
     });
-    doc.save('reporte_llegadas_'+new Date().toISOString().slice(0,10)+'.pdf');
-    toast('PDF generado: '+emps.length+' empleado(s)','success');
-  }
-}
+    const fy=doc.lastAutoTable.finalY+5;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,58,42);
+    doc.text('Total de dias registrados: '+emp.rows.length, 14, fy);
+  });
 
-</script>
-</body>
-</html>
+  // Pie en todas las páginas
+  const totalPages=doc.internal.getNumberOfPages();
+  for(let p=1;p<=totalPages;p++){
+    doc.setPage(p);
+    doc.setFontSize(7); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
+    doc.text('Control HH.EE  |  '+new Date().toLocaleDateString('es-CO')+'  |  Pag. '+p+'/'+totalPages,
+      W/2, H-5, {align:'center'});
+  }
+  doc.save('reporte_llegadas_'+new Date().toISOString().slice(0,10)+'.pdf');
+  toast('PDF generado: '+emps.length+' empleado(s)','success');
+}
+}
