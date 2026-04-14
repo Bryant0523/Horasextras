@@ -11,18 +11,10 @@
   --accent:#00a572;--accent3:#4f5fc4;--danger:#dc2626;--warn:#d97706;--success:#059669;
   --shadow:rgba(0,0,0,.08);
 }
-[data-theme="light"] .logo img {
-  filter: invert(1);
-}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;transition:background .2s,color .2s;}
 .shell{display:flex;min-height:100vh;}
-.titlebar { height: 36px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 16px; -webkit-app-region: drag; user-select: none; position: sticky; top: 0; z-index: 100; }
-.titlebar-drag { display: flex; align-items: center; gap: 8px; font-size: 12px; font-family: 'DM Mono', monospace; color: var(--muted); }
-.titlebar-btns { display: flex; gap: 4px; -webkit-app-region: no-drag; }
-.titlebar-btns button { width: 28px; height: 24px; border: none; background: transparent; color: var(--muted); border-radius: 5px; cursor: pointer; font-size: 12px; transition: all .15s; }
-.titlebar-btns button:hover { background: var(--border); color: var(--text); }
-.titlebar-btns .close-btn:hover { background: var(--danger); color: #fff; }
+
 /* SIDEBAR */
 .sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;transition:background .2s;}
 .main{flex:1;overflow-x:hidden;}
@@ -42,7 +34,16 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .theme-btn:hover{border-color:var(--accent);color:var(--accent);}
 
 /* TOPBAR */
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;transition:background .2s;}
+.topbar {  background: var(--surface);  border-bottom: 1px solid var(--border);  padding: 14px 28px;  display: flex;  align-items: center;  gap: 12px;  position: sticky;  top: 0;  z-index: 10;  transition: background .2s;  -webkit-app-region: drag;}
+
+/* responsive */
+@media (max-width: 768px) {  .topbar { padding: 10px 12px; }}
+
+.sede-selector {  margin-left: auto; }
+
+.win-controls {  display: flex;  gap: 4px;  -webkit-app-region: no-drag;}
+
+.hamburger,.sede-selector,.page-title {  -webkit-app-region: no-drag;}
 .page-title{font-size:20px;font-weight:800;color:var(--text);}
 .page-title span{color:var(--accent);}
 .status-pill{font-size:11px;font-family:'DM Mono',monospace;padding:4px 12px;border-radius:20px;font-weight:500;}
@@ -52,14 +53,11 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
 .content{padding:28px;}
 .section{display:none;}
-.section.active{display:block;animation: fadeIn .2s ease;}
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+.section.active{display:block;}
+
 /* CARDS */
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px;transition:background .2s,border .2s;}
-.card-title{font-size:10px;font-family:'DM Mono',monospace;color:var(--text);letter-spacing :2px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card-title{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
 .card-title::after{content:'';flex:1;height:1px;background:var(--border);}
 
 /* HORARIO GRID */
@@ -125,7 +123,7 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
 .stat-card.amber{--ac:var(--warn);}
 .stat-card.blue{--ac:var(--accent3);}
 .stat-card.purple{--ac:#a855f7;}
-.stat-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--text);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px;}
+.stat-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px;}
 .stat-val{font-size:26px;font-weight:800;line-height:1;color:var(--text);}
 .stat-sub{font-size:11px;color:var(--muted2);font-family:'DM Mono',monospace;margin-top:3px;}
 
@@ -150,14 +148,6 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
 #toast.success{border-color:var(--success);color:var(--success);}
 #toast.error{border-color:var(--danger);color:var(--danger);}
 #toast.info{border-color:var(--accent3);color:var(--accent3);}
-#toast-container {  position: fixed;  bottom: 24px;  right: 24px;  display: flex;  flex-direction: column;  gap: 10px;  z-index: 9999;}
-.toast-v2 {  background: var(--card);  border: 1px solid var(--border2);  border-radius: 10px;  padding: 12px 16px;  min-width: 260px;  max-width: 360px;  display: flex;  align-items: center;  gap: 10px;  font-size: 13px;  font-family: 'DM Mono', monospace;  color: var(--text);  box-shadow: 0 8px 24px var(--shadow);  position: relative;  overflow: hidden;  opacity: 0;  transform: translateX(20px);  transition: all .3s ease;}
-.toast-v2.show {  opacity: 1;  transform: translateX(0);}
-.toast-bar {  position: absolute;  bottom: 0; left: 0;  height: 3px;  background: var(--col);  width: 100%;  animation: toastBar var(--dur) linear forwards;}
-@keyframes toastBar {
-  from { width: 100%; }
-  to   { width: 0%; }
-}
 
 /* MISC */
 .help-text{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:8px;line-height:1.6;}
@@ -229,7 +219,15 @@ tbody td.name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;}
 /* Overlay when sidebar is open on mobile */
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:149;}
 .sidebar-overlay.open{display:block;}
+.topbar { -webkit-app-region: drag; }
 
+.win-controls {  display: flex;  gap: 4px; background:var(--border2);  -webkit-app-region: no-drag; /* los botones no arrastran */
+}
+.hamburger, .sede-selector, .win-controls {  -webkit-app-region: no-drag;}
+.win-controls button {  background: transparent;  border: none;  color: var(--muted2);  width: 32px;  height: 32px;  border-radius: 6px;  cursor: pointer;  font-size: 14px;  display: flex;  align-items: center;  justify-content: center;  transition: background 0.15s;}
+
+.win-controls button:hover { background: var(--border); color: var(--text); }
+.win-controls .btn-close-win:hover { background: #e81123; color: #fff; }
 @media(max-width:768px){
   /* Layout */
   .shell{flex-direction:column;}

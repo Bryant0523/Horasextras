@@ -3,38 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rook</title>
+<title>Control de Horas Extras — Hikvision</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="icon" type="image/png" sizes="32x32" href="image/favicon-32x32.png">
-<link rel="manifest" href="image/site.webmanifest"> 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/app.css">
 
 </head>
 <body>
-  <!-- TITLEBAR PERSONALIZADO -->
-<div class="titlebar">
-  <div class="titlebar-drag">
-    <img src="image/Logo.png" style="width:18px;height:18px;object-fit:contain;">
-    <span>Rook</span>
-  </div>
-  <div class="titlebar-btns">
-    <button onclick="window.electronAPI.minimize()">─</button>
-    <button onclick="window.electronAPI.maximize()">▢</button>
-    <button class="close-btn" onclick="window.electronAPI.close()">✕</button>
-  </div>
-</div>
 <div class="shell">
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
   <div class="logo">
-  <img src="image/Logo.png" alt="Rook" style="width:56px;height:56px;object-fit:contain;">
-</div>
+    <div class="logo-mark">HH.EE · Hikvision</div>
+    <h1>Control de<br>Horas Extras</h1>
+  </div>
   <nav class="nav">
     <div class="nav-sec-label">Configuración</div>
     <a class="nav-item active" data-sec="sedes"     onclick="go('sedes',this)">    <span class="ico">🏢</span>Sedes y Horarios</a>
@@ -51,9 +38,6 @@
     <div class="nav-sec-label" style="margin-top:auto;padding-top:16px;">Datos</div>
     <a class="nav-item" onclick="confirmarLimpiarTodo()" style="color:var(--danger);border-left-color:transparent;">
       <span class="ico">🗑</span>Limpiar todos los datos
-    </a>
-    <a class="nav-item" onclick="go('about', this)">
-      <span class="ico">ℹ️</span> Acerca de
     </a>
   </nav>
   <div class="sidebar-footer">
@@ -74,6 +58,11 @@
       </select>
       <span class="status-pill pill-idle" id="spill">Sin datos</span>
     </div>
+      <div class="win-controls">
+    <button onclick="window.electronAPI.minimize()" title="Minimizar">─</button>
+    <button onclick="window.electronAPI.maximize()" title="Maximizar">□</button>
+    <button class="btn-close-win" onclick="window.electronAPI.close()" title="Cerrar">✕</button>
+  </div>
   </div>
   <div class="content">
 
@@ -88,7 +77,7 @@
           </div>
           <div class="form-group">
             <label>Tolerancia llegada (minutos)</label>
-            <input id="s-tol" type="number" value="0" min="0" max="60">
+            <input id="s-tol" type="number" value="10" min="0" max="60">
           </div>
           <div class="form-group">
             <label>Contabilizar entrada anticipada como HH.EE</label>
@@ -149,6 +138,11 @@
           <div class="form-group"><label>Nombre completo</label><input id="e-nom" type="text" placeholder="Juan Pérez"></div>
           <div class="form-group"><label>Sede asignada</label><select id="e-sede"><option value="">— selecciona —</option></select></div>
           <div class="form-group"><label>Cargo (opcional)</label><input id="e-cargo" type="text" placeholder="Vendedor"></div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label>Días de descanso compensatorio (fechas separadas por coma)</label>
+            <input id="e-descansos" type="text" placeholder="Ej: 2026-01-10, 2026-01-17, 2026-01-24">
+            <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:3px;">Días que el empleado descansa en compensación (sábados u otros) — no se contabilizan como ausencia</span>
+          </div>
         </div>
 
         <!-- HORARIOS PERSONALIZADOS A / B -->
@@ -223,13 +217,6 @@
           <button class="btn btn-secondary btn-sm" id="btn-cancel-emp" style="display:none;" onclick="resetEmpForm()">✕ Cancelar edición</button>
         </div>
         <input type="hidden" id="e-eid">
-      </div>
-      <div class="form-group" style="grid-column:1/-1;">
-        <label>Días de descanso compensatorio (fechas separadas por coma)</label>
-        <input id="e-descansos" type="text" placeholder="Ej: 2026-01-10, 2026-01-17, 2026-01-24">
-        <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:3px;">
-          Días que el empleado descansa en lugar de trabajar el sábado u otro día — no se cuentan como ausencia
-        </span>
       </div>
       <div class="card">
         <div class="card-title">Empleados <span id="ec" class="tag">0</span></div>
@@ -477,23 +464,6 @@
         <div id="aus-resumen"></div>
       </div>
     </section>
-    <div class="section" id="sec-about">
-      <div class="content">
-        <div class="card" style="max-width:480px;margin:0 auto;text-align:center;padding:40px;">
-          <img src="image/Logo.png" style="width:72px;height:72px;object-fit:contain;margin-bottom:20px;">
-          <h2 style="font-size:22px;font-weight:800;margin-bottom:6px;">Rook</h2>
-          <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text);margin-bottom:24px;">
-            Control de Horas Extras · v1.0.0
-          </p>
-          <div
-            style="border-top:1px solid var(--text);padding-top:20px;font-size:12px;color:var(--muted2);font-family:'DM Mono',monospace;line-height:2;">
-            <div>Desarrollado con amor por <strong style="color:var(--text);">ROOK</strong></div>
-            <div>Electron + IndexedDB</div>
-            <div style="margin-top:12px;font-size:11px;color:var(--text);">© 2025 Todos los derechos reservados</div>
-          </div>
-        </div>
-      </div>
-    </div>
 
   </div>
 </div>
@@ -540,7 +510,7 @@
     </div>
   </div>
 </div>
-<script src="js/app.js"></script>
 
+  <script src="js/app.js"></script>
 </body>
 </html>

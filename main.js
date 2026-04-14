@@ -17,20 +17,19 @@ function createWindow() {
     title: 'Rook',
     autoHideMenuBar: true,
     webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        sandbox: false,          // ← agregar esto
-        preload: path.join(__dirname, 'preload.js')
-}
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
   })
 
   win.loadFile('renderer/index.html')
   console.log('preload path:', path.join(__dirname, 'preload.js'))
 
-win.once('ready-to-show', () => {
-  win.show()
-  win.webContents.openDevTools() // ← abre consola automático
-})
+  win.once('ready-to-show', () => {
+    win.show()
+    win.webContents.openDevTools()
+  })
 
   ipcMain.on('minimize', () => win.minimize())
   ipcMain.on('maximize', () => win.isMaximized() ? win.unmaximize() : win.maximize())

@@ -65,9 +65,8 @@ function toggleTheme(){
 // ══════════════════════════════════════════
 //  NAV
 // ══════════════════════════════════════════
-const NTITLES = {
-  sedes: 'Sedes y <span>Horarios</span>',  empleados: 'Gestión de <span>Empleados</span>',  dashboard: '<span>Dashboard</span>',  importar: 'Importar <span>CSV</span>',  resultados: 'Ver <span>Resultados</span>',  ausencias: '<span>Ausencias</span>',  llegadas: 'Reporte de <span>Llegadas</span>',  michel: 'Reporte de <span>Llegadas (Michel)</span>',  exportar: 'Exportar <span>Excel / PDF</span>',  about: 'Acerca <span>de</span>'  // ← agregar esto
-};
+const NTITLES={sedes:'Sedes y <span>Horarios</span>',empleados:'Gestión de <span>Empleados</span>',dashboard:'<span>Dashboard</span>',importar:'Importar <span>CSV</span>',resultados:'Ver <span>Resultados</span>',ausencias:'<span>Ausencias</span>',llegadas:'Reporte de <span>Llegadas</span>',michel:'Reporte de <span>Llegadas (Michel)</span>',exportar:'Exportar <span>Excel / PDF</span>'};
+
 function onSedeActivaChange(){
   sedeActiva = document.getElementById('sede-activa').value;
   localStorage.setItem('sedeActiva', sedeActiva);
@@ -122,32 +121,8 @@ function go(name,el){
 //  TOAST / SPILL
 // ══════════════════════════════════════════
 let _tt;
-function toast(msg, type = 'info', duration = 3500) {
-  const icons = { success: '✅', error: '❌', warn: '⚠️', info: 'ℹ️' }
-  const colors = { success: 'var(--success)', error: 'var(--danger)', warn: 'var(--warn)', info: 'var(--accent3)' }
-
-  const t = document.createElement('div')
-  t.className = 'toast-v2'
-  t.innerHTML = `
-    <span class="toast-icon">${icons[type] || icons.info}</span>
-    <span class="toast-msg">${msg}</span>
-    <div class="toast-bar" style="--dur:${duration}ms;--col:${colors[type] || colors.info}"></div>
-  `
-
-  let container = document.getElementById('toast-container')
-  if (!container) {
-    container = document.createElement('div')
-    container.id = 'toast-container'
-    document.body.appendChild(container)
-  }
-  container.appendChild(t)
-
-  setTimeout(() => t.classList.add('show'), 10)
-  setTimeout(() => {
-    t.classList.remove('show')
-    setTimeout(() => t.remove(), 300)
-  }, duration)
-}function spill(t,msg){const el=document.getElementById('spill');el.textContent=msg;el.className='status-pill '+(t==='ok'?'pill-ok':t==='warn'?'pill-warn':'pill-idle');}
+function toast(msg,t='info'){const el=document.getElementById('toast');el.textContent=msg;el.className='show '+t;clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3500);}
+function spill(t,msg){const el=document.getElementById('spill');el.textContent=msg;el.className='status-pill '+(t==='ok'?'pill-ok':t==='warn'?'pill-warn':'pill-idle');}
 
 // ── Sidebar móvil ──
 function toggleSidebar(){
@@ -370,6 +345,7 @@ async function guardarEmp(){
   const nom=document.getElementById('e-nom').value.trim();
   const sid=document.getElementById('e-sede').value;
   const cargo=document.getElementById('e-cargo').value.trim();
+  const descansos=document.getElementById('e-descansos').value.split(',').map(d=>d.trim()).filter(Boolean);
   const eid=document.getElementById('e-eid').value;
   if(!id||!nom||!sid){toast('ID, nombre y sede son obligatorios','error');return;}
   // Horario A
@@ -387,9 +363,7 @@ async function guardarEmp(){
       hbHasta=document.getElementById('e-hb-hasta').value||null;
     }
   }
-  const e={id,nombre:nom,sedeId:sid,cargo,diasPersonal,descansos,haDesde,diasPersonalB,hbDesde,hbHasta};
-  const descansos = document.getElementById('e-descansos').value
-  .split(',').map(d=>d.trim()).filter(Boolean);
+  const e={id,nombre:nom,sedeId:sid,cargo,descansos,diasPersonal,haDesde,diasPersonalB,hbDesde,hbHasta};
   await dbPut('empleados',e);
   const i=S.empleados.findIndex(x=>x.id===id);
   if(i>=0)S.empleados[i]=e;else S.empleados.push(e);
@@ -405,8 +379,8 @@ function editEmp(id){
   document.getElementById('e-nom').value=e.nombre;
   document.getElementById('e-sede').value=e.sedeId;
   document.getElementById('e-cargo').value=e.cargo||'';
+  document.getElementById('e-descansos').value=(e.descansos||[]).join(', ');
   document.getElementById('e-eid').value=e.id;
-  document.getElementById('e-descansos').value = (e.descansos||[]).join(', ');
   document.getElementById('btn-cancel-emp').style.display='inline-flex';
   if(e.diasPersonal){
     if(!empSchedOpen) toggleEmpSched();
@@ -424,11 +398,10 @@ function editEmp(id){
 
 function resetEmpForm(){
   document.getElementById('e-id').value='';document.getElementById('e-nom').value='';
-  document.getElementById('e-cargo').value='';document.getElementById('e-eid').value='';
+  document.getElementById('e-cargo').value='';document.getElementById('e-descansos').value='';document.getElementById('e-eid').value='';
   document.getElementById('btn-cancel-emp').style.display='none';
   document.getElementById('e-ha-desde').value='';
   document.getElementById('e-hb-desde').value='';
-  document.getElementById('e-descansos').value='';
   document.getElementById('e-hb-hasta').value='';
   if(empSchedOpen) toggleEmpSched();
   switchSchedTab('A');
@@ -977,7 +950,7 @@ async function exportXLSX(){
         totalEmps++;
       }
       const fname='reporte_'+sedeData.nom.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
-      XLSX.writeFile(wb,fname);
+      XLSX.writeFile(wb,fname,{cellStyles:true});
     }
     toast(`${totalEmps} empleados exportados en ${Object.keys(bySede).length} archivo(s)`,'success');
 
@@ -1011,7 +984,7 @@ async function exportXLSX(){
     applyXlsxStylesFlat(wsCons,Object.keys(cons[0]||{}).length);
     XLSX.utils.book_append_sheet(wb,wsDet,'Detalle Diario');
     XLSX.utils.book_append_sheet(wb,wsCons,'Por Empleado');
-    XLSX.writeFile(wb,`horas_extras_consolidado_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `horas_extras_consolidado_${new Date().toISOString().slice(0,10)}.xlsx`, {cellStyles:true});
     toast('Excel consolidado exportado','success');
   }
 }
@@ -1316,10 +1289,10 @@ function renderRecargos(data){
   document.getElementById('dash-recargos').innerHTML=`<div class="table-wrap"><table>
     <thead><tr>
       <th>Empleado</th><th>Sede</th>
-      <th>HE Diur. Ord. <span style="color:var(--text);font-size:9px;">(+25%)</span></th>
-      <th>HE Noct. Ord. <span style="color:var(--text);font-size:9px;">(+75%)</span></th>
-      <th>HE Diur. Fest. <span style="color:var(--text);font-size:9px;">(+100%)</span></th>
-      <th>HE Noct. Fest. <span style="color:var(--text);font-size:9px;">(+150%)</span></th>
+      <th>HE Diur. Ord. <span style="color:var(--accent);font-size:9px;">(+25%)</span></th>
+      <th>HE Noct. Ord. <span style="color:var(--accent3);font-size:9px;">(+75%)</span></th>
+      <th>HE Diur. Fest. <span style="color:var(--warn);font-size:9px;">(+100%)</span></th>
+      <th>HE Noct. Fest. <span style="color:var(--danger);font-size:9px;">(+150%)</span></th>
       <th>Valor total</th>
     </tr></thead>
     <tbody>${rows.sort((a,b)=>(b.heDiurOrd+b.heNoctOrd+b.heDiurFest+b.heNoctFest)-(a.heDiurOrd+a.heNoctOrd+a.heDiurFest+a.heNoctFest)).map(e=>{
@@ -1592,7 +1565,7 @@ function exportLlegadasXLSX(){
   applyXlsxStyles(ws2, aoa2);
   XLSX.utils.book_append_sheet(wb,ws2,'Resumen Empleados');
 
-  XLSX.writeFile(wb,`reporte_llegadas_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `reporte_llegadas_${new Date().toISOString().slice(0,10)}.xlsx`, {cellStyles:true});
   toast('Reporte de llegadas exportado','success');
 }
 
@@ -1866,7 +1839,7 @@ function exportAusenciasXLSX(){
   ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
   applyXlsxStyles(ws,aoa);
   XLSX.utils.book_append_sheet(wb,ws,'Ausencias');
-  XLSX.writeFile(wb,`ausencias_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `ausencias_${new Date().toISOString().slice(0,10)}.xlsx`, {cellStyles:true});
   toast('Reporte de ausencias exportado','success');
 }
 
@@ -2049,7 +2022,7 @@ function exportMichelXLSX(){
     const shName=emp.nom.substring(0,31).replace(/[\\/\?\*\[\]:]/g,'_');
     XLSX.utils.book_append_sheet(wb,ws,shName);
   });
-  XLSX.writeFile(wb,`llegadas_michel_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `llegadas_michel_${new Date().toISOString().slice(0,10)}.xlsx`, {cellStyles:true});
   toast('Excel Michel exportado','success');
 }
 
@@ -2230,73 +2203,68 @@ function exportReporteMichel(fmt){
       const shName=emp.nom.substring(0,31).replace(/[\/\?\*\[\]:]/g,'_');
       XLSX.utils.book_append_sheet(wb,ws,shName);
     });
-    XLSX.writeFile(wb,'reporte_llegadas_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    XLSX.writeFile(wb, 'reporte_llegadas_'+new Date().toISOString().slice(0,10)+'.xlsx', {cellStyles:true});
     toast('Excel generado: '+emps.length+' empleado(s)','success');
 
-  }  else {
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const W=doc.internal.pageSize.getWidth();
-  const H=doc.internal.pageSize.getHeight();
-  let firstEmp=true;
-
-  emps.forEach((emp)=>{
-    emp.rows.sort((a,b)=>a.fecha.localeCompare(b.fecha));
-
-    // Si no es el primero y la tabla anterior terminó muy abajo, nueva página
-    const curY = firstEmp ? 0 : (doc.lastAutoTable?.finalY||0);
-    const spaceNeeded = 28 + emp.rows.length*7 + 20; // header + filas + total
-    if(!firstEmp && curY + spaceNeeded > H - 15) doc.addPage();
-    firstEmp=false;
-
-    const startY = firstEmp===false ? (doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY+12 : 10) : 10;
-    const useY = (doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY+14 : 10);
-    
-    // Mini encabezado por empleado (no barra completa, solo texto)
-    const headerY = doc.lastAutoTable ? doc.lastAutoTable.finalY+14 : 10;
-    doc.setFillColor(26,58,42);
-    doc.roundedRect(14, headerY-5, W-28, 10, 2, 2, 'F');
+  } else {
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const W=doc.internal.pageSize.getWidth();
+    const H=doc.internal.pageSize.getHeight();
+    // Encabezado global
+    doc.setFillColor(26,58,42); doc.rect(0,0,W,18,'F');
     doc.setTextColor(255,255,255);
-    doc.setFontSize(9); doc.setFont('helvetica','bold');
-    doc.text('Colaborador: '+emp.nom, 18, headerY+1.5);
+    doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text('REPORTE DE HORAS DE LLEGADA',14,12);
     doc.setFontSize(8); doc.setFont('helvetica','normal');
     doc.setTextColor(180,220,200);
-    doc.text(emp.sede, W-16, headerY+1.5, {align:'right'});
-
-    doc.autoTable({
-      startY: headerY+7,
-      head:[['Fecha','Dia de la Semana','Hora de Llegada']],
-      body:emp.rows.map(r=>[fmtFecha(r.fecha),r.dia,r.entrada]),
-      styles:{fontSize:9,cellPadding:2,textColor:[30,30,30]},
-      headStyles:{fillColor:[0,165,114],textColor:[255,255,255],fontStyle:'bold',halign:'center'},
-      alternateRowStyles:{fillColor:[244,251,247]},
-      columnStyles:{0:{halign:'left',fontStyle:'bold'},1:{halign:'center'},2:{halign:'center'}},
-      margin:{left:14,right:14},
-      didParseCell:(data)=>{
-        if(data.section==='body'){
-          const r=emp.rows[data.row.index];
-          if(r&&r.tardanza>0){
-            data.cell.styles.fillColor=[255,229,229];
-            data.cell.styles.textColor=[180,0,0];
-            data.cell.styles.fontStyle='bold';
+    doc.text(new Date().toLocaleDateString('es-CO'), W-14, 12, {align:'right'});
+    let curY=24;
+    emps.forEach((emp,ei)=>{
+      emp.rows.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+      const spaceNeeded=10+emp.rows.length*6.5+14;
+      if(ei>0 && curY+spaceNeeded>H-12){ doc.addPage(); curY=14; }
+      // Mini header por empleado
+      doc.setFillColor(0,165,114); doc.roundedRect(14,curY,W-28,8,1.5,1.5,'F');
+      doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+      doc.text('Colaborador: '+emp.nom, 18, curY+5.5);
+      doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+      doc.setTextColor(220,255,240);
+      doc.text(emp.sede, W-16, curY+5.5, {align:'right'});
+      curY+=10;
+      doc.autoTable({
+        startY:curY,
+        head:[['Fecha','Dia de la Semana','Hora de Llegada']],
+        body:emp.rows.map(r=>[fmtFecha(r.fecha),r.dia,r.entrada]),
+        styles:{fontSize:8,cellPadding:1.8,textColor:[30,30,30]},
+        headStyles:{fillColor:[26,58,42],textColor:[255,255,255],fontStyle:'bold',halign:'center',fontSize:8},
+        alternateRowStyles:{fillColor:[244,251,247]},
+        columnStyles:{0:{halign:'left',fontStyle:'bold',cellWidth:38},1:{halign:'center',cellWidth:48},2:{halign:'center',cellWidth:38}},
+        margin:{left:14,right:14},
+        tableWidth:'fixed',
+        didParseCell:(data)=>{
+          if(data.section==='body'){
+            const r=emp.rows[data.row.index];
+            if(r&&r.tardanza>0){
+              data.cell.styles.fillColor=[255,229,229];
+              data.cell.styles.textColor=[180,0,0];
+              data.cell.styles.fontStyle='bold';
+            }
           }
         }
-      }
+      });
+      curY=doc.lastAutoTable.finalY+2;
+      doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(26,58,42);
+      doc.text('Total de dias registrados: '+emp.rows.length, 14, curY+4);
+      curY+=10;
     });
-    const fy=doc.lastAutoTable.finalY+5;
-    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(26,58,42);
-    doc.text('Total de dias registrados: '+emp.rows.length, 14, fy);
-  });
-
-  // Pie en todas las páginas
-  const totalPages=doc.internal.getNumberOfPages();
-  for(let p=1;p<=totalPages;p++){
-    doc.setPage(p);
-    doc.setFontSize(7); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
-    doc.text('Control HH.EE  |  '+new Date().toLocaleDateString('es-CO')+'  |  Pag. '+p+'/'+totalPages,
-      W/2, H-5, {align:'center'});
+    const totalPgs=doc.internal.getNumberOfPages();
+    for(let p=1;p<=totalPgs;p++){
+      doc.setPage(p);
+      doc.setFontSize(6.5); doc.setTextColor(160,160,160); doc.setFont('helvetica','normal');
+      doc.text('Control HH.EE  |  '+new Date().toLocaleDateString('es-CO')+'  |  Pag. '+p+'/'+totalPgs, W/2, H-4, {align:'center'});
+    }
+    doc.save('reporte_llegadas_'+new Date().toISOString().slice(0,10)+'.pdf');
+    toast('PDF generado: '+emps.length+' empleado(s)','success');
   }
-  doc.save('reporte_llegadas_'+new Date().toISOString().slice(0,10)+'.pdf');
-  toast('PDF generado: '+emps.length+' empleado(s)','success');
-}
 }
