@@ -12,8 +12,9 @@ function createWindow() {
     show: false,
     frame: false,
     titleBarStyle: 'hidden',
+    fullscreen: true,
     backgroundColor: '#0e0f11',
-    icon: path.join(__dirname, 'image/logo32x32.ico'),
+    icon: path.join(__dirname, 'renderer/image/logo32x32.ico'),
     title: 'Rook',
     autoHideMenuBar: true,
     webPreferences: {
@@ -28,7 +29,7 @@ function createWindow() {
 
   win.once('ready-to-show', () => {
     win.show()
-    win.webContents.openDevTools()
+    // win.webContents.openDevTools()
   })
 
   ipcMain.on('minimize', () => win.minimize())
