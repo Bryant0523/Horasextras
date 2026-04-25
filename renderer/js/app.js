@@ -642,7 +642,8 @@ async function procesar(){
     const almM=parseInt(dc?.almuerzo??60);
     const tolM=sede.tolerancia||0;
     const minExtM=sede.minExt??15;
-    const antici=sede.antici||0;  // 1 = contar entrada anticipada como HH.EE
+    const minAntici=sede.antici||0;   // umbral en minutos para entrada anticipada
+    const antici=minAntici>0;         // true si está activado
     const hnoct=t2m(sede.hnoct||'21:00');
 
     const p=marks[0],u=marks[marks.length-1];
@@ -670,9 +671,11 @@ async function procesar(){
     // Trabajadas netas = bruto - almuerzo
     const trabajadasNeto=sinSalida?null:Math.max(0,trabajadasBruto-almTom);
 
-    // HH.EE — minutos DESPUÉS de la salida + (si antici=1) minutos ANTES de la entrada
+   // HH.EE salida
     const extrasSalida = sinSalida ? null : Math.max(0, uM - salM);
-    const extrasEntrada = (antici && esLab && !sinSalida) ? Math.max(0, entM - pM) : 0;
+    // HH.EE entrada anticipada
+    const minutosAntes = esLab ? Math.max(0, entM - pM) : 0;
+    const extrasEntrada = (antici && esLab && !sinSalida && minutosAntes >= minAntici) ? minutosAntes : 0;
     const rawExtras = sinSalida ? null : (extrasSalida||0) + extrasEntrada;
     const extrasMin = sinSalida ? null : (rawExtras >= minExtM ? rawExtras : 0);
     let heDiur=0, heNoct=0;
@@ -1727,6 +1730,9 @@ function renderAusencias(resetPage=true){
   const desde=document.getElementById('af-desde')?.value||'';
   const hasta=document.getElementById('af-hasta')?.value||'';
   if(resetPage) _ausPage=1;
+
+  document.getElementById('aus-tb').innerHTML=
+    '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);font-family:\'DM Mono\',monospace;font-size:12px;">⏳ Calculando ausencias…</td></tr>';
 
   const todas = calcAusencias();
   _ausFiltered = todas.filter(a=>{
