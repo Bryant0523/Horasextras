@@ -29,28 +29,26 @@
 
       </div>
       <nav class="nav">
-        <div class="nav-sec-label">Configuración</div>
-        <a class="nav-item active" data-sec="sedes" onclick="go('sedes',this)"> <span class="ico">🏢</span>Sedes y
-          Horarios</a>
+        <div class="nav-sec-label">📊 Configuración</div>
+        <a class="nav-item active" data-sec="sedes" onclick="go('sedes',this)"><span class="ico">🏢</span>Sedes y Horarios</a>
         <a class="nav-item" data-sec="empleados" onclick="go('empleados',this)"><span class="ico">👥</span>Empleados</a>
-        <div class="nav-sec-label">Operación</div>
+        
+        <div class="nav-sec-label">📈 Control</div>
+        <a class="nav-item" data-sec="importar" onclick="go('importar',this)"><span class="ico">📁</span>Importar Datos</a>
+        <a class="nav-item" data-sec="resultados" onclick="go('resultados',this)"><span class="ico">📊</span>Resultados</a>
         <a class="nav-item" data-sec="dashboard" onclick="go('dashboard',this)"><span class="ico">📈</span>Dashboard</a>
-        <a class="nav-item" data-sec="importar" onclick="go('importar',this)"> <span class="ico">📁</span>Importar
-          CSV</a>
-        <a class="nav-item" data-sec="resultados" onclick="go('resultados',this)"><span
-            class="ico">📊</span>Resultados</a>
-        <a class="nav-item" data-sec="ausencias" onclick="go('ausencias',this)"> <span
-            class="ico">🚫</span>Ausencias</a>
-        <a class="nav-item" data-sec="llegadas" onclick="go('llegadas',this)"> <span class="ico">🕐</span>Reporte
-          Llegadas</a>
-        <div class="nav-sec-label">Exportar</div>
-        <a class="nav-item" data-sec="michel" onclick="go('michel',this)"> <span class="ico">📋</span>Reporte Llegadas
-          (Michel)</a>
-        <a class="nav-item" data-sec="exportar" onclick="go('exportar',this)"> <span class="ico">⬇️</span>Exportar
-          Excel/PDF</a>
-        <div class="nav-sec-label" style="margin-top:auto;padding-top:16px;">Datos</div>
+        
+        <div class="nav-sec-label">📋 Reportes</div>
+        <a class="nav-item" data-sec="llegadas" onclick="go('llegadas',this)"><span class="ico">🕐</span>Llegadas</a>
+        <a class="nav-item" data-sec="ausencias" onclick="go('ausencias',this)"><span class="ico">🚫</span>Ausencias</a>
+        <a class="nav-item" data-sec="michel" onclick="go('michel',this)"><span class="ico">📋</span>Reporte Especial</a>
+        
+        <div class="nav-sec-label">⬇️ Exportar</div>
+        <a class="nav-item" data-sec="exportar" onclick="go('exportar',this)"><span class="ico">⬇️</span>Excel / PDF</a>
+        
+        <div class="nav-sec-label" style="margin-top:auto;padding-top:20px;">⚙️ Sistema</div>
         <a class="nav-item" onclick="confirmarLimpiarTodo()" style="color:var(--danger);border-left-color:transparent;">
-          <span class="ico">🗑</span>Limpiar todos los datos
+          <span class="ico">🗑</span>Limpiar Datos
         </a>
       </nav>
       <div class="sidebar-footer">

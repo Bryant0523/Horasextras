@@ -644,7 +644,8 @@ async function procesar(){
     const minExtM=sede.minExt??15;
     const minAntici=sede.antici||0;   // umbral en minutos para entrada anticipada
     const antici=minAntici>0;         // true si está activado
-    const hnoct=t2m(sede.hnoct||'21:00');
+    // Art. 179 CST: Horas nocturnas son 22:00-05:59 (fijo, no configurable)
+    const hnoct=t2m('22:00');
 
     const p=marks[0],u=marks[marks.length-1];
     const pM=p.getHours()*60+p.getMinutes();
@@ -663,7 +664,8 @@ async function procesar(){
     if(marks.length>=4){
       let mg=0;
       for(let i=0;i<marks.length-1;i++){const g=(marks[i+1]-marks[i])/60000;if(g>15&&g>mg)mg=g;}
-      if(mg>15)almTom=Math.round(mg);
+      // Redondeo hacia ABAJO (a favor del trabajador) - Art. 160 CST
+      if(mg>15)almTom=Math.floor(mg);
     }
 
     // Horas trabajadas brutas
@@ -680,11 +682,38 @@ async function procesar(){
     const extrasMin = sinSalida ? null : (rawExtras >= minExtM ? rawExtras : 0);
     let heDiur=0, heNoct=0;
     if(extrasMin>0){
-      // Diurnas: desde entrada anticipada hasta hora nocturna, y desde salida hasta nocturna
-      const extEnd = uM; // hora de salida real
-      const extStart = antici ? Math.min(pM, entM) : salM; // si anticipa, desde entrada real
-      heDiur = extStart < hnoct ? Math.min(extrasMin, hnoct - extStart) : 0;
-      heNoct = Math.max(0, extEnd - hnoct);
+      // Art. 179 CST: Horas diurnas 06:00-21:59, Nocturnas 22:00-05:59
+      // Determinar el rango de horas extras
+      const extStart = antici ? Math.min(pM, entM) : salM; // Inicio de extras
+      const extEnd = uM; // Fin de extras (salida real)
+      
+      // Hay que considerar si se cruza medianoche (1440 = 24*60)
+      const MEDIANOCHE = 1440;
+      const INICIO_NOCTURNO = t2m('22:00'); // 1320 minutos
+      const FIN_NOCTURNO = t2m('05:59'); // 359 minutos (antes de medianoche siguiente)
+      
+      if(extStart >= extEnd){ // Turno que cruza medianoche
+        // Extras desde extStart hasta medianoche
+        heDiur = Math.min(extStart, INICIO_NOCTURNO) < INICIO_NOCTURNO 
+          ? Math.min(INICIO_NOCTURNO - extStart, extrasMin) 
+          : 0;
+        heNoct = Math.max(0, extrasMin - heDiur);
+      } else {
+        // Turno normal (sin cruzar medianoche)
+        if(extEnd <= INICIO_NOCTURNO){
+          // Todo es diurno
+          heDiur = extrasMin;
+          heNoct = 0;
+        } else if(extStart >= INICIO_NOCTURNO){
+          // Todo es nocturno
+          heDiur = 0;
+          heNoct = extrasMin;
+        } else {
+          // Parte diurna y parte nocturna
+          heDiur = Math.min(extrasMin, INICIO_NOCTURNO - extStart);
+          heNoct = Math.max(0, extrasMin - heDiur);
+        }
+      }
     }
 
     let estado='Normal';

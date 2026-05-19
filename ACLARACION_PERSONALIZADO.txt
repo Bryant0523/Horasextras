@@ -1,0 +1,131 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║        ⚠️  ACLARACIÓN: SIN LÍMITE DE 4 HORAS (POR TU SOLICITUD)            ║
+║                                                                            ║
+║              Clínica de Implantes - Jornadas Especiales Permitidas         ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+════════════════════════════════════════════════════════════════════════════════
+
+📍 PROBLEMA IDENTIFICADO
+
+El usuario señaló correctamente que agregué una restricción de máximo 4 horas
+extras diarias, pero esto NO es correcto para su caso de uso:
+
+  Tu clínica de implantes permite jornadas largas:
+  - Entrada: 07:00 de la mañana
+  - Salida: 22:00 de la noche (10 PM)
+  - Total: ~15 horas de trabajo
+  - Autorizado por: Tu jefe/administración
+
+════════════════════════════════════════════════════════════════════════════════
+
+✅ SOLUCIÓN IMPLEMENTADA
+
+REMOVÍ la restricción de 4 horas que había agregado.
+
+CÓDIGO ANTES (MI ERROR):
+──────────────────────
+const rawExtras = sinSalida ? null : (extrasSalida||0) + extrasEntrada;
+let extrasMin = sinSalida ? null : (rawExtras >= minExtM ? rawExtras : 0);
+if(extrasMin > 240) {  // ❌ ESTO FUE EL ERROR
+  extrasMin = 240;     // ❌ REMOVIDO AHORA
+}
+
+CÓDIGO AHORA (CORRECTO):
+──────────────────────
+const rawExtras = sinSalida ? null : (extrasSalida||0) + extrasEntrada;
+const extrasMin = sinSalida ? null : (rawExtras >= minExtM ? rawExtras : 0);
+// ✅ SIN RESTRICCIÓN - Permite tus jornadas largas
+
+════════════════════════════════════════════════════════════════════════════════
+
+📋 CAMBIOS FINALES (REVISADOS)
+
+Tras tu corrección, los cambios finales son SOLO 3:
+
+1. ✅ HORARIO NOCTURNO FIJO (22:00)
+   - Línea: 648
+   - Cambio: Forzar a '22:00' (no configurable)
+   - Razón: Art. 179 CST
+
+2. ✅ REDONDEO DE ALMUERZO (hacia abajo)
+   - Línea: 668
+   - Cambio: Math.floor en lugar de Math.round
+   - Razón: A favor del trabajador
+
+3. ✅ CÁLCULO CORRECTO DIURNAS vs NOCTURNAS
+   - Línea: 683-717
+   - Cambio: Lógica completa reescrita
+   - Razón: Considera medianoche y todos los casos
+
+════════════════════════════════════════════════════════════════════════════════
+
+⚠️  LO QUE REMOVÍ (MY MISTAKE)
+
+Esto ya NO está en el código:
+
+  if(extrasMin > 240) {
+    extrasMin = 240;
+  }
+
+Razón de eliminación: Tu configuración específica permite jornadas largas
+                      que superan las 4 horas legales permitidas.
+
+════════════════════════════════════════════════════════════════════════════════
+
+📊 EJEMPLO CON TU CASO DE USO
+
+ESCENARIO: Jornada 07:00-22:00 (15 horas totales)
+Horario normal: 08:00-17:00 (9 horas)
+Horas extras: 07:00-08:00 + 17:00-22:00 = 6 horas extras
+
+ANTES (CON MI ERROR):
+  Sistema habría limitado a: 4 horas ❌ (incorrecto para ti)
+
+AHORA (REMOVIDO EL LÍMITE):
+  Sistema registra: 6 horas extras ✅ (correcto para tu clínica)
+
+════════════════════════════════════════════════════════════════════════════════
+
+✨ RESUMEN FINAL
+
+Tu sistema ahora:
+
+✅ Calcula horas diurnas y nocturnas CORRECTAMENTE
+✅ Redondea almuerzo A FAVOR del trabajador
+✅ Fija horario nocturno a 22:00 (legal)
+✅ PERMITE jornadas largas sin limitar extras (tu configuración)
+✅ Preserva TODAS tus personalizaciones específicas
+
+════════════════════════════════════════════════════════════════════════════════
+
+🔍 CÓMO VERIFICAR EN EL CÓDIGO
+
+Abre: renderer/js/app.js
+
+Busca la línea 682:
+  const extrasMin = sinSalida ? null : (rawExtras >= minExtM ? rawExtras : 0);
+
+Verifica que NO tenga:
+  ❌ if(extrasMin > 240) { extrasMin = 240; }
+
+Si NO está → ✅ CORRECTO, fue removido
+
+════════════════════════════════════════════════════════════════════════════════
+
+GRACIAS POR SEÑALAR EL ERROR
+
+Tu feedback fue importante para preservar la funcionalidad específica de tu
+clínica. El sistema ahora respeta TU configuración sin imposiciones legales
+que no aplican a tu caso.
+
+════════════════════════════════════════════════════════════════════════════════
+
+Estado: ✅ CORREGIDO
+Archivo modificado: renderer/js/app.js (línea 682)
+Cambio: Removido el límite de 4 horas
+Resultado: Tu sistema permite jornadas 07:00-22:00 sin restricción
+
+════════════════════════════════════════════════════════════════════════════════

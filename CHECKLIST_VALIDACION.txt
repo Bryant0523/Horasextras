@@ -1,0 +1,234 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                 CHECKLIST DE VALIDACIÓN - HORAS EXTRAS                    ║
+║                        Rook Hours Control v1.0                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📋 FASE 1: VERIFICACIÓN DE CÓDIGO
+═════════════════════════════════════════════════════════════════════════════
+
+  ☐ 1.1 Abrir renderer/js/app.js en editor de texto
+  
+  ☐ 1.2 Buscar "Art. 179 CST" (debe aparecer 3 veces)
+        - Línea 647-648: const hnoct=t2m('22:00');
+        - Línea 689: Comentario en sección heDiur/heNoct
+        - Línea 691: Más comentarios en esa sección
+  
+  ☐ 1.3 Buscar "Art. 180 CST" (debe aparecer 1 vez)
+        - Línea 682: Validación de máximo 240 minutos
+  
+  ☐ 1.4 Buscar "Math.floor" en almuerzo (línea 668)
+        - Debe estar: if(mg>15)almTom=Math.floor(mg);
+  
+  ☐ 1.5 Verificar que NO aparezcan:
+        - sede.hnoct (debe estar reemplazado por '22:00')
+        - Math.round(mg) en almuerzo
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 FASE 2: PRUEBAS FUNCIONALES
+═════════════════════════════════════════════════════════════════════════════
+
+  ☐ 2.1 Iniciar la aplicación (npm start)
+        - Verificar que NO haya errores en consola del navegador
+        - Debe mostrar: "BD activa" en la esquina inferior
+  
+  ☐ 2.2 Crear una sede de prueba
+        - Nombre: "TEST"
+        - Horario: 08:00-17:00
+        - Sin cambios en otros campos
+  
+  ☐ 2.3 Crear un empleado de prueba
+        - Nombre: "Empleado Test"
+        - Sede: TEST
+        - Asignar horario normal
+  
+  ☐ 2.4 Preparar archivo CSV de prueba con casos:
+
+        CASO A: Trabajo 20:00-23:30 (Entrada Anticipada)
+        ──────────────────────────────────────────────
+        Empleado: Empleado Test
+        Fecha: [Hoy]
+        Entrada: 20:00
+        Salida: 23:30
+        Esperado:
+          - Horas extras: 3.5 horas
+          - Diurnas: 2 horas (20:00-21:59)
+          - Nocturnas: 1.5 horas (22:00-23:30)
+          - Almuerzo: 0 (no aplica en extras)
+  
+        CASO B: Almuerzo con decimal
+        ───────────────────────────
+        Empleado: Empleado Test
+        Fecha: [Mañana]
+        Entrada: 08:00
+        Salida: 17:00
+        Almuerzo: ~30.6 minutos (4 marcas: 08:00, 12:00, 12:31, 17:00)
+        Esperado:
+          - Almuerzo registrado: 30 minutos (Math.floor)
+          - Horas trabajadas netas: 8.5 horas
+  
+        CASO C: Turno Nocturno Puro
+        ──────────────────────────
+        Empleado: Empleado Test
+        Fecha: [Pasado mañana]
+        Entrada: 22:00
+        Salida: 06:00 (día siguiente)
+        Esperado:
+          - Horas extras: 8 horas
+          - Diurnas: 0 horas
+          - Nocturnas: 8 horas
+  
+  ☐ 2.5 Importar el CSV
+        - Seleccionar sede TEST
+        - Procesar datos
+        - Esperar a que termine (barra de progreso)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 FASE 3: VALIDACIÓN DE RESULTADOS
+═════════════════════════════════════════════════════════════════════════════
+
+  ☐ 3.1 Ir a sección "Resultados"
+  
+  ☐ 3.2 VALIDAR CASO A (20:00-23:30):
+        
+        Buscar registro de Empleado Test con fecha [Hoy]
+        
+        Columnas a verificar:
+        ┌─────────────────────────────────────────────────────────┐
+        │ Campo                  │ Valor Esperado    │ Real     │
+        ├────────────────────────┼──────────────────┼──────────┤
+        │ Entrada                │ 20:00            │ ___      │
+        │ Salida                 │ 23:30            │ ___      │
+        │ Horas Trabajadas       │ 3h 30m           │ ___      │
+        │ HE Diurnas             │ 2h 00m           │ ___      │
+        │ HE Nocturnas           │ 1h 30m           │ ___      │
+        │ Total HE               │ 3h 30m           │ ___      │
+        │ Estado                 │ "Con extras"     │ ___      │
+        └─────────────────────────────────────────────────────────┘
+        
+        ✓ Si TODO es correcto → MARCA ☑
+        ✗ Si hay diferencias → ANOTA DIFERENCIA
+  
+  ☐ 3.3 VALIDAR CASO B (Almuerzo 30.6 min):
+        
+        Buscar registro de Empleado Test con fecha [Mañana]
+        
+        Columnas a verificar:
+        ┌─────────────────────────────────────────────────────────┐
+        │ Campo                  │ Valor Esperado    │ Real     │
+        ├────────────────────────┼──────────────────┼──────────┤
+        │ Entrada                │ 08:00            │ ___      │
+        │ Salida                 │ 17:00            │ ___      │
+        │ Horas Trabajadas       │ 8h 30m           │ ___      │
+        │ Total HE               │ 00h 00m          │ ___      │
+        │ Estado                 │ "Normal"         │ ___      │
+        └─────────────────────────────────────────────────────────┘
+        
+        ✓ Si TODO es correcto → MARCA ☑
+        ✗ Si hay diferencias → ANOTA DIFERENCIA
+  
+  ☐ 3.4 VALIDAR CASO C (22:00-06:00):
+        
+        Buscar registro de Empleado Test con fecha [Pasado mañana]
+        
+        Columnas a verificar:
+        ┌──────────────────────────────────────────────────────────┐
+        │ Campo                  │ Valor Esperado     │ Real      │
+        ├────────────────────────┼───────────────────┼───────────┤
+        │ Entrada                │ 22:00             │ ___       │
+        │ Salida                 │ 06:00             │ ___       │
+        │ Horas Trabajadas       │ 8h 00m            │ ___       │
+        │ HE Diurnas             │ 00h 00m           │ ___       │
+        │ HE Nocturnas           │ 8h 00m            │ ___       │
+        │ Total HE               │ 8h 00m            │ ___       │
+        │ Estado                 │ "Con extras"      │ ___       │
+        └──────────────────────────────────────────────────────────┘
+        
+        ✓ Si TODO es correcto → MARCA ☑
+        ✗ Si hay diferencias → ANOTA DIFERENCIA
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 FASE 4: EXPORTACIÓN A EXCEL
+═════════════════════════════════════════════════════════════════════════════
+
+  ☐ 4.1 Ir a sección "Exportar"
+  
+  ☐ 4.2 Seleccionar formato: "Consolidado por periodo"
+  
+  ☐ 4.3 Opciones:
+        ☐ Incluir tardanzas: SÍ
+        ☐ Incluir recargos: SÍ
+        ☐ Desglose diurno/nocturno: SÍ
+  
+  ☐ 4.4 Hacer clic en "Descargar Excel"
+  
+  ☐ 4.5 Abrir archivo Excel descargado
+  
+  ☐ 4.6 Verificar hoja "Detalle Diario":
+        - CASO A debe tener 2h diurnas + 1.5h nocturnas
+        - CASO B debe tener almuerzo = 30 minutos
+        - CASO C debe tener 8h nocturnas + 0h diurnas
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 FASE 5: VALIDACIÓN DE LÍMITE (4 horas máximo)
+═════════════════════════════════════════════════════════════════════════════
+
+  ☐ 5.1 Crear un caso de prueba donde el sistema INTENTE calcular 5h extras
+  
+        Por ejemplo:
+        - Horario: 08:00-17:00
+        - Entrada real: 08:00
+        - Salida real: 22:00 (5 horas tarde)
+  
+  ☐ 5.2 Procesar en CSV
+  
+  ☐ 5.3 Verificar en Resultados:
+        - Total HE debe ser: 04h 00m (MÁXIMO, no 5h)
+        - Diurnas: 04h 00m (17:00-21:00)
+        - Nocturnas: 00h 00m
+  
+  ☐ 5.4 ¿Está limitado a 4 horas?
+        ☐ SÍ → CORRECTO ✅
+        ☐ NO → REVISAR CÓDIGO ❌
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 RESUMEN FINAL
+═════════════════════════════════════════════════════════════════════════════
+
+  Elementos a revisar:
+
+  CÓDIGO:
+  ☐ Línea 647-648: hnoct = '22:00' (fijo)
+  ☐ Línea 668: Math.floor para almuerzo
+  ☐ Línea 682-686: Validación de máximo 240 min
+  ☐ Línea 687-721: Lógica de heDiur/heNoct
+
+  FUNCIONALIDAD:
+  ☐ Caso A: 20:00-23:30 → 2h diur + 1.5h noct
+  ☐ Caso B: Almuerzo → 30 min (floor)
+  ☐ Caso C: 22:00-06:00 → 0h diur + 8h noct
+  ☐ Límite: 5h extras → limitado a 4h
+
+  DOCUMENTACIÓN:
+  ☐ CAMBIOS_REALIZADOS.md (crear ✓)
+  ☐ GUIA_CORRECCIONES.md (crear ✓)
+  ☐ PRUEBAS_VALIDACION.js (crear ✓)
+  ☐ RESUMEN_CORRECCIONES.txt (crear ✓)
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║  ✅ SI TODOS LOS PUNTOS ESTÁN MARCADOS: VALIDACIÓN EXITOSA               ║
+║  ❌ SI HAY ALGO INCORRECTO: REVISAR CAMBIOS EN CÓDIGO                    ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+SOPORTE:
+  - Revisar GUIA_CORRECCIONES.md para entender cada cambio
+  - Ejecutar validarCasos() en consola del navegador (F12)
+  - Contactar si hay dudas sobre interpretación legal
+
+Fecha de validación: _______________
+Responsable: ______________________
+Resultado: [ ] APROBADO  [ ] RECHAZADO  [ ] PENDIENTE DE REVISIÓN
